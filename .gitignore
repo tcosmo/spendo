@@ -5,3 +5,5 @@ _build/
 _opam/
 
 .DS_Store
+
+spendo_data.json

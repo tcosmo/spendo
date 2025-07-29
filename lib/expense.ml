@@ -18,7 +18,7 @@ let total_expenses expenses =
   List.fold_left (fun acc exp -> acc + exp.Types.amount) 0 expenses
 
 let format_expense expense =
-  let amount_str = Printf.sprintf "%.2f" (float_of_int expense.Types.amount /. 100.0) in
+  let amount_str = Printf.sprintf "    %.2f" (float_of_int expense.Types.amount /. 100.0) in
   let message_str = match expense.Types.message with
     | Some msg -> " - " ^ msg
     | None -> ""
@@ -29,5 +29,5 @@ let format_daily_expenses daily =
   let total = total_expenses daily.Types.expenses in
   let expenses_str = List.map format_expense daily.Types.expenses in
   let expenses_list = String.concat "\n" expenses_str in
-  Printf.sprintf "Date: %s\nExpenses:\n%s\nTotal: %.2f" 
+  Printf.sprintf "Date: %s\n  Expenses:\n%s\n  Total: %.2f" 
     daily.Types.date expenses_list (float_of_int total /. 100.0) 
