@@ -17,6 +17,9 @@ spendo 25.4
 # Add an expense with a message
 spendo 25.4 -m "food"
 
+# Add an expense for a previous day
+spendo 25.4 -m "yesterday's lunch" -d 1
+
 # List today's expenses
 spendo -l
 ```
@@ -96,6 +99,9 @@ Added expense: 15.50 (coffee)
 
 $ spendo 25.00 -m "lunch"
 Added expense: 25.00 (lunch)
+
+$ spendo 12.75 -m "yesterday's dinner" -d 1
+Added expense: 12.75 (yesterday's dinner) (1 days ago)
 
 $ spendo -l
 Date: 2024-01-15

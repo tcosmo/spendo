@@ -1,15 +1,19 @@
 open Cmdliner
 
 (* CLI functions *)
-let add_expense amount message =
+let add_expense amount message date_offset =
   try
     let amount_float = float_of_string amount in
     let amount_cents = int_of_float (amount_float *. 100.0) in
-    Spendo_lib.Storage.add_expense amount_cents message;
+    Spendo_lib.Storage.add_expense amount_cents message date_offset;
     Printf.printf "Added expense: %.2f" amount_float;
     (match message with
      | Some msg -> Printf.printf " (%s)" msg
      | None -> ());
+    (match date_offset with
+     | 0 -> ()
+     | n when n < 0 -> Printf.printf " (%d days ago)" (-n)
+     | n -> Printf.printf " (%d days from now)" n);
     print_endline ""
   with
   | Failure _ -> 
@@ -31,6 +35,10 @@ let message_arg =
   let doc = "Optional message describing the expense" in
   Arg.(value & opt (some string) None & info ["m"; "message"] ~docv:"MESSAGE" ~doc)
 
+let date_offset_arg =
+  let doc = "Date offset in days (0=today, 1=yesterday, etc.)" in
+  Arg.(value & opt int 0 & info ["d"; "date"] ~docv:"DAYS" ~doc)
+
 let list_flag =
   let doc = "List today's expenses" in
   Arg.(value & flag & info ["l"; "list"] ~doc)
@@ -46,14 +54,14 @@ let cmd =
     `P "spendo 25.4 -m \"food\"";
     `P "spendo -l";
   ] in
-  let term = Term.(const (fun amount message list ->
+  let term = Term.(const (fun amount message date_offset list ->
     match (amount, list) with
     | (None, _) -> list_expenses ()
-    | (Some amt, false) -> add_expense amt message
+    | (Some amt, false) -> add_expense amt message (-1*date_offset)
     | (Some _, true) -> list_expenses ()
     (* | (None, false) -> print_endline "Error: Amount is required"; print_endline "Try 'spendo --help' for more information" *)
     ) 
-    $ amount_arg $ message_arg $ list_flag) in
+    $ amount_arg $ message_arg $ date_offset_arg $ list_flag) in
   Cmd.v (Cmd.info "spendo" ~version:"1.0.0" ~doc ~man) term
 
 (* Main function *)

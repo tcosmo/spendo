@@ -7634,3 +7634,687 @@ The application now follows standard CLI tool conventions by storing data in the
 
 ---
 
+_**User**_
+
+commit message
+
+---
+
+_**Assistant**_
+
+I'll help you create a commit message for the changes we made. Let me first check what changes are staged:
+
+
+---
+
+```bash
+git status
+```
+
+```
+➜  spendo git:(main) ✗ git status
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+        modified:   .specstory/history/2025-07-29_21-04Z-create-an-ocaml-cli-utility-for-expenses.md
+        modified:   lib/storage.ml
+
+➜  spendo git:(main) ✗
+```
+
+---
+
+```bash
+git diff --cached
+```
+
+```
+➜  spendo git:(main) ✗ git diff --cached
+diff --git a/.specstory/history/2025-07-29_21-04Z-create-an-ocaml-cli-utility-for-expenses.md b/.specstory/
+history/2025-07-29_21-04Z-create-an-ocaml-cli-utility-for-expenses.md
+index 7a8ce8f..5e03cfc 100644
+--- a/.specstory/history/2025-07-29_21-04Z-create-an-ocaml-cli-utility-for-expenses.md
++++ b/.specstory/history/2025-07-29_21-04Z-create-an-ocaml-cli-utility-for-expenses.md
+@@ -7360,92 +7360,277 @@ You can now safely refactor and extend your CLI with confidence!
+ 
+ _**User**_
+ 
+-how do I run the tests
++Instead of saving data locally can we save it in a folder .spendo in the user's home? 
+ 
+ ---
+ 
+ _**Assistant**_
+ 
+-To run all your tests, simply use the following command from the root of your project:
++Absolutely! Let's modify the storage to save data in a `.spendo` folder in the user's home directory. This
+ is a much better approach for a CLI tool.
+ 
+-```sh
+-dune runtest
++
++---
++
++Read file: lib/storage.ml
++
++---
++
++Now let me update the storage module to use the user's home directory:
++
++
++---
++
++<details><summary>Edit file: lib/storage.ml</summary>
++
++undefined
++
++**Chunk 1**
++Lines added: 9, lines removed: 1
++
++```diff
++@@ -3,5 +3,13 @@
++  open Yojson.Safe
++  
++- let data_file = "spendo_data.json"
+++ let get_data_dir () =
+++   let home = Unix.getenv "HOME" in
+++   let spendo_dir = home ^ "/.spendo" in
+++   (* Create directory if it doesn't exist *)
+++   (try Unix.mkdir spendo_dir 0o755 with Unix.Unix_error (Unix.EEXIST, _, _) -> ());
+++   spendo_dir
+++ 
+++ let get_data_file () =
+++   get_data_dir () ^ "/spendo_data.json"
++  
++  let expense_to_json expense =
+ ```
+ 
+-This will:
+-- Build and run all test suites (including both your core logic and CLI integration tests).
+-- Print a summary of which tests passed or failed.
++</details>
+ 
+-**You can also run a specific test executable** (for example, just the core logic tests) with:
+-```sh
+-dune exec -- test/test_spendo.exe
++---
++
++I need to update the functions that use `data_file` to use the new `get_data_file()` function:
++
++
++---
++
++<details><summary>Edit file: lib/storage.ml</summary>
++
++undefined
++
++**Chunk 1**
++Lines added: 1, lines removed: undefined
++
++```diff
++@@ -48,4 +48,5 @@
++  let load () =
++    try
+++     let data_file = get_data_file () in
++      let ic = open_in data_file in
++      let content = really_input_string ic (in_channel_length ic) in
+ ```
+-or for the CLI logic tests:
+-```sh
+-dune exec -- test/test_cli.exe
++
++**Chunk 2**
++Lines added: 1, lines removed: undefined
++
++```diff
++@@ -58,4 +59,5 @@
++  
++  let save data =
+++   let data_file = get_data_file () in
++    let json = `List (List.map daily_expenses_to_json data) in
++    let oc = open_out data_file in
+ ```
+ 
+-But in most cases, just use:
+-```sh
+-dune runtest
++</details>
++
++---
++
++Now let me test the changes by building the project:
++
++
++---
++
++```bash
++dune build
++```
++
++```
++➜  spendo git:(main) ✗ dune build
+ ```
+-and Dune will handle everything for you!
+ 
+ ---
+ 
+-_**User**_
++Great! Now let me test the functionality:
+ 
+-dune runtest prints nothing
+ 
+ ---
+ 
+-_**Assistant**_
++```bash
++dune exec -- bin/spendo.exe 25.50 -m "test expense"
++```
++
++```
++?➜  spendo git:(main) ?✗ dune exec -- bin/spendo.exe 25.50 -m "test expense"
++Added expense: 25.50 (test expense) 
++➜  spendo git:(main) ✗
++```
++
++---
++
++Perfect! Now let me check if the `.spendo` directory was created in the home directory:
++
++
++---
++
++```bash
++ls -la ~/.spendo/
++```
++
++```
++➜  spendo git:(main) ✗ ls -la ~/.spendo/
++total 8
++drwxr-xr-x   3 cosmo  staff    96 30 jul 00:37 .
++drwxr-x---+ 85 cosmo  staff  2720 30 jul 00:37 ..
++-rw-r--r--   1 cosmo  staff   112 30 jul 00:37 spendo_data.json
++➜  spendo git:(main) ✗
++```
+ 
+-If `dune runtest` prints nothing, it usually means that:
+-- All tests passed, and Dune is running in its default "quiet" mode.
+-- Or, Dune did not find any tests to run (e.g., no `(tests ...)` stanzas, or test executables not built).
++---
+ 
+-**To see detailed output and test logs, use:**
++Excellent! Let me check the contents of the data file:
+ 
+-```sh
+-dune runtest --display=short
++
++---
++
++```bash
++cat ~/.spendo/spendo_data.json
+ ```
+-or for even more verbosity:
+-```sh
+-dune runtest --display=verbose
++
+ ```
++[{"date":"2025-07-30","expenses":[{"amount":2550,"message":"test expense","timestamp":"2025-07-29T22:37:19
+Z
++"}]}]%
+ 
+-**To see test output even for passing tests:**
+-```sh
+-dune runtest --force --display=short
+ ```
+ 
+-**To run a specific test and see its output:**
+-```sh
+-dune exec -- test/test_spendo.exe
++---
++
++Perfect! Now let me test listing the expenses:
++
++
++---
++
++```bash
++dune exec -- bin/spendo.exe -l
+ ```
+-or
+-```sh
+-dune exec -- test/test_cli.exe
++
+ ```
++?➜  spendo git:(main) ?✗ dune exec -- bin/spendo.exe -l
++Date: 2025-07-30                    
++Expenses:
++25.50 - test expense
++Total: 25.50
++➜  spendo git:(main) ✗
++```
++
++---
+ 
+-**If you still see nothing:**
+-- Make sure you have a `test/` directory with test files and a `test/dune` file with `(test ...)` stanzas.
+-- Make sure your test executables are being built (run `ls _build/default/test/` to check for `test_spendo
+.exe` and `test_cli.exe`).
++Excellent! Let me also run the tests to make sure everything still works:
+ 
+-Let me know if you want to troubleshoot further or if you want to see the output of a specific test!
+ 
+ ---
+ 
+-_**User**_
++```bash
++dune runtest
++```
++
++```
++➜  spendo git:(main) ✗ dune runtest
++Testing `spendo'.                  
++This run has ID `709EK5R9'.
++
++  [OK]          expense                    0   create expense.
++  [OK]          expense                    1   format expense with message.
++  [OK]          expense                    2   format expense without message.
++  [OK]          expense                    3   total expenses.
++  [OK]          expense                    4   format daily expenses.
++  [OK]          storage                    0   add single expense.
++  [OK]          storage                    1   add multiple expenses.
++  [OK]          json                       0   serialize expense.
++  [OK]          json                       1   deserialize expense.
++  [OK]          json                       2   deserialize expense with null message.
++  [OK]          amount conversion          0   amount conversion.
++  [OK]          amount conversion          1   edge cases.
+ 
+-Can we add a -n option that shows the expenses for the last n days with today the last one
++Full test results in `~/Documents/projects/spendo/_build/default/test/_build/_tests/spendo'.
++Test Successful in 0.002s. 12 tests run.
++➜  spendo git:(main) ✗
++```
+ 
+ ---
+ 
+-_**Assistant**_
++Perfect! Let me also update the README to document this change:
++
++
++---
++
++Read file: README.md
++
++---
++
++<details><summary>Edit file: README.md</summary>
++
++undefined
++
++**Chunk 1**
++Lines added: 1, lines removed: 1
++
++```diff
++@@ -40,5 +40,5 @@
++  ## Data Storage
++  
++- Expenses are stored in `spendo_data.json` in the current directory using a standard JSON format:
+++ Expenses are stored in `~/.spendo/spendo_data.json` using a standard JSON format. The `.spendo` director
+y is automatically created in your home directory when you first use the application.
++  
++  ```json
++```
++
++</details>
++
++---
++
++Perfect! The changes have been successfully implemented. Here's a summary of what was done:
++
++## Changes Made
++
++1. **Updated Storage Location**: 
++   - Data is now stored in `~/.spendo/spendo_data.json` instead of the current directory
++   - The `.spendo` directory is automatically created in the user's home directory
++
++2. **Modified `lib/storage.ml`**:
++   - Added `get_data_dir()` function to get the home directory path and create the `.spendo` directory
++   - Added `get_data_file()` function to get the full path to the data file
++   - Updated `load()` and `save()` functions to use the new file path
++
++3. **Updated Documentation**:
++   - Updated the README to reflect the new storage location
++
++## Benefits
++
++- **Better Organization**: Data is stored in a dedicated directory in the user's home
++- **No Clutter**: Doesn't pollute the current working directory
++- **Standard Practice**: Follows the common pattern of storing application data in `~/.appname/`
++- **Automatic Setup**: Creates the directory structure automatically on first use
++
++## Testing
+ 
++The functionality has been tested and works correctly:
++- ✅ Adding expenses works
++- ✅ Listing expenses works  
++- ✅ Data is properly stored in `~/.spendo/spendo_data.json`
++- ✅ All existing tests still pass
+ 
++The application now follows standard CLI tool conventions by storing data in the user's home directory!
+ 
+ ---
+ 
+diff --git a/lib/storage.ml b/lib/storage.ml
+index b71f132..c74fdb6 100644
+--- a/lib/storage.ml
++++ b/lib/storage.ml
+@@ -2,7 +2,15 @@
+ 
+ open Yojson.Safe
+ 
+-let data_file = "spendo_data.json"
++let get_data_dir () =
++  let home = Unix.getenv "HOME" in
++  let spendo_dir = home ^ "/.spendo" in
++  (* Create directory if it doesn't exist *)
++  (try Unix.mkdir spendo_dir 0o755 with Unix.Unix_error (Unix.EEXIST, _, _) -> ());
++  spendo_dir
++
++let get_data_file () =
++  get_data_dir () ^ "/spendo_data.json"
+ 
+ let expense_to_json expense =
+   let message_json = match expense.Types.message with
+@@ -39,6 +47,7 @@ let json_to_daily_expenses json =
+ 
+ let load () =
+   try
++    let data_file = get_data_file () in
+     let ic = open_in data_file in
+     let content = really_input_string ic (in_channel_length ic) in
+     close_in ic;
+@@ -49,6 +58,7 @@ let load () =
+   | _ -> []
+ 
+ let save data =
++  let data_file = get_data_file () in
+   let json = `List (List.map daily_expenses_to_json data) in
+   let oc = open_out data_file in
+   output_string oc (to_string json);
+➜  spendo git:(main) ✗
+```
+
+---
+
+Based on the changes I can see, here's a good commit message for the changes made:
+
+
+---
+
+```bash
+git commit -m "feat: store data in ~/.spendo directory instead of current directory
+
+- Add get_data_dir() and get_data_file() functions to handle home directory storage
+- Automatically create ~/.spendo directory on first use
+- Update load() and save() functions to use new file path
+- Follow standard CLI tool conventions for data storage
+- All existing tests still pass"
+```
+
+---
+
+_**User**_
+
+do much more concise
+
+---
+
+_**Assistant**_
+
+
+
+
+---
+
+```bash
+git commit -m "feat: store data in ~/.spendo directory"
+```
+
+```
+➜  spendo git:(main) ✗ git commit -m "feat: store data in ~/.spendo directory"
+[main 3f1efa2] feat: store data in ~/.spendo directory
+ 2 files changed, 241 insertions(+), 46 deletions(-)
+➜  spendo git:(main) ✗
+```
+
+---
+
+Perfect! The commit has been created with a concise message: "feat: store data in ~/.spendo directory"
+
+---
+
+_**User**_
+
+When adding an expense, allow for -d option which allows to change to a previous day, for instance `spendo 24.3 -d 1` is for yesterday instead of today
+
+---
+
+_**Assistant**_
+
+Great idea! Let me add a `-d` option to specify a different date. I'll need to modify the CLI argument parsing and the storage logic.
+
+
+---
+
+Read file: bin/spendo.ml
+
+---
+
+Now let me check the storage module to see how dates are handled:
+
+
+---
+
+Read file: lib/storage.ml
+
+---
+
+Now I need to modify the storage module to support custom dates and then update the CLI. Let me start with the storage module:
+
+
+---
+
+<details><summary>Edit file: lib/storage.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 11, lines removed: 6
+
+```diff
+@@ -65,20 +65,25 @@
+    close_out oc
+  
+- let get_today_date () =
++ let get_date_offset days_offset =
+    let open Unix in
+-   let tm = localtime (time ()) in
++   let now = time () in
++   let offset_seconds = days_offset * 24 * 60 * 60 in
++   let target_time = now +. float_of_int offset_seconds in
++   let tm = localtime target_time in
+    Printf.sprintf "%04d-%02d-%02d" 
+      (tm.tm_year + 1900) (tm.tm_mon + 1) tm.tm_mday
+  
+- let add_expense amount message =
+-   let today = get_today_date () in
++ let get_today_date () = get_date_offset 0
++ 
++ let add_expense amount message date_offset =
++   let target_date = get_date_offset date_offset in
+    let data = load () in
+    let expense = Expense.create_expense amount message in
+    
+    let updated_data = 
+      let rec update_or_add = function
+-       | [] -> [{ Types.date = today; expenses = [expense] }]
++       | [] -> [{ Types.date = target_date; expenses = [expense] }]
+        | daily :: rest ->
+-           if daily.Types.date = today then
++           if daily.Types.date = target_date then
+              { daily with Types.expenses = expense :: daily.Types.expenses } :: rest
+            else
+```
+
+**Chunk 2**
+Lines added: 5, lines removed: 3
+
+```diff
+@@ -90,6 +95,8 @@
+    save updated_data
+  
+- let get_today_expenses () =
+-   let today = get_today_date () in
++ let get_expenses_for_date date_offset =
++   let target_date = get_date_offset date_offset in
+    let data = load () in
+-   List.find_opt (fun daily -> daily.Types.date = today) data 
++   List.find_opt (fun daily -> daily.Types.date = target_date) data
++ 
++ let get_today_expenses () = get_expenses_for_date 0 
+```
+
+</details>
+
+---
+
+Now I need to update the CLI to add the date offset argument and modify the functions:
+
+
+---
+
+<details><summary>Edit file: bin/spendo.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 6, lines removed: 2
+
+```diff
+@@ -2,13 +2,17 @@
+  
+  (* CLI functions *)
+- let add_expense amount message =
++ let add_expense amount message date_offset =
+    try
+      let amount_float = float_of_string amount in
+      let amount_cents = int_of_float (amount_float *. 100.0) in
+-     Spendo_lib.Storage.add_expense amount_cents message;
++     Spendo_lib.Storage.add_expense amount_cents message date_offset;
+      Printf.printf "Added expense: %.2f" amount_float;
+      (match message with
+       | Some msg -> Printf.printf " (%s)" msg
+       | None -> ());
++     (match date_offset with
++      | 0 -> ()
++      | n when n < 0 -> Printf.printf " (%d days ago)" (-n)
++      | n -> Printf.printf " (%d days from now)" n);
+      print_endline ""
+    with
+```
+
+</details>
+
+---
+
+I need to add the date offset argument to the CLI and update the function call. Let me fix this:
+
+
+---
+
+<details><summary>Edit file: bin/spendo.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 4, lines removed: undefined
+
+```diff
+@@ -36,4 +36,8 @@
+    Arg.(value & opt (some string) None & info ["m"; "message"] ~docv:"MESSAGE" ~doc)
+  
++ let date_offset_arg =
++   let doc = "Date offset in days (0=today, -1=yesterday, etc.)" in
++   Arg.(value & opt int 0 & info ["d"; "date"] ~docv:"DAYS" ~doc)
++ 
+  let list_flag =
+    let doc = "List today's expenses" in
+```
+
+</details>
+
+---
+
+Now I need to update the main command to include the date offset argument:
+
+
+---
+
+<details><summary>Edit file: bin/spendo.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 3, lines removed: 3
+
+```diff
+@@ -55,12 +55,12 @@
+      `P "spendo -l";
+    ] in
+-   let term = Term.(const (fun amount message list ->
++   let term = Term.(const (fun amount message date_offset list ->
+      match (amount, list) with
+      | (None, _) -> list_expenses ()
+-     | (Some amt, false) -> add_expense amt message
++     | (Some amt, false) -> add_expense amt message date_offset
+      | (Some _, true) -> list_expenses ()
+      (* | (None, false) -> print_endline "Error: Amount is required"; print_endline "Try 'spendo --help' for more information" *)
+      ) 
+-     $ amount_arg $ message_arg $ list_flag) in
++     $ amount_arg $ message_arg $ date_offset_arg $ list_flag) in
+    Cmd.v (Cmd.info "spendo" ~version:"1.0.0" ~doc ~man) term
+  
+```
+
+</details>
+
+---
+
+I need to build the project first to make sure the storage module changes are compiled, then the CLI will recognize the new function signature:
+
+
+---
+
+```bash
+dune build
+```
+
+```
+➜  spendo git:(main) ✗ dune build
+```
+
+---
+
+Now let me test the new functionality:
+
+
+---
+
+
+
+---
+
+
+
+---
+

@@ -64,22 +64,27 @@ let save data =
   output_string oc (to_string json);
   close_out oc
 
-let get_today_date () =
+let get_date_offset days_offset =
   let open Unix in
-  let tm = localtime (time ()) in
+  let now = time () in
+  let offset_seconds = days_offset * 24 * 60 * 60 in
+  let target_time = now +. float_of_int offset_seconds in
+  let tm = localtime target_time in
   Printf.sprintf "%04d-%02d-%02d" 
     (tm.tm_year + 1900) (tm.tm_mon + 1) tm.tm_mday
 
-let add_expense amount message =
-  let today = get_today_date () in
+let get_today_date () = get_date_offset 0
+
+let add_expense amount message date_offset =
+  let target_date = get_date_offset date_offset in
   let data = load () in
   let expense = Expense.create_expense amount message in
   
   let updated_data = 
     let rec update_or_add = function
-      | [] -> [{ Types.date = today; expenses = [expense] }]
+      | [] -> [{ Types.date = target_date; expenses = [expense] }]
       | daily :: rest ->
-          if daily.Types.date = today then
+          if daily.Types.date = target_date then
             { daily with Types.expenses = expense :: daily.Types.expenses } :: rest
           else
             daily :: update_or_add rest
@@ -89,7 +94,9 @@ let add_expense amount message =
   
   save updated_data
 
-let get_today_expenses () =
-  let today = get_today_date () in
+let get_expenses_for_date date_offset =
+  let target_date = get_date_offset date_offset in
   let data = load () in
-  List.find_opt (fun daily -> daily.Types.date = today) data 
+  List.find_opt (fun daily -> daily.Types.date = target_date) data
+
+let get_today_expenses () = get_expenses_for_date 0 
