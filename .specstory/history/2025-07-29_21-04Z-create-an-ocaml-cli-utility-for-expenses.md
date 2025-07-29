@@ -9257,3 +9257,179 @@ feat: show all requested days in -n output, even if empty
 
 ---
 
+_**User**_
+
+Can you add tests for the -n and -d features we added
+
+---
+
+_**Assistant**_
+
+Absolutely! Let me add comprehensive tests for the `-n` and `-d` features. I'll add them to the existing test suite.
+
+
+---
+
+Read file: test/test_spendo.ml
+
+---
+
+Now I'll add tests for the new `-d` and `-n` features. Let me add them before the test suite:
+
+
+---
+
+<details><summary>Edit file: test/test_spendo.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 97, lines removed: undefined
+
+```diff
+@@ -149,4 +149,101 @@
+    ) test_cases
+  
++ (* Tests for date offset functionality *)
++ let test_date_offset () =
++   (* Test that date offset calculation works correctly *)
++   let today = Spendo_lib.Storage.get_today_date () in
++   let yesterday = Spendo_lib.Storage.get_date_offset (-1) in
++   let two_days_ago = Spendo_lib.Storage.get_date_offset (-2) in
++   
++   (* Check that dates are different *)
++   check bool "today and yesterday are different" (today <> yesterday) true;
++   check bool "yesterday and two days ago are different" (yesterday <> two_days_ago) true;
++   check bool "today and two days ago are different" (today <> two_days_ago) true;
++   
++   (* Check that dates are in correct format (YYYY-MM-DD) *)
++   let date_format_regex = Str.regexp "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" in
++   check bool "today format" (Str.string_match date_format_regex today 0) true;
++   check bool "yesterday format" (Str.string_match date_format_regex yesterday 0) true;
++   check bool "two days ago format" (Str.string_match date_format_regex two_days_ago 0) true
++ 
++ let test_add_expense_with_date_offset () =
++   (* Test adding expenses with date offset *)
++   TestStorage.reset ();
++   
++   (* Add expense for yesterday *)
++   TestStorage.add_expense 1000 (Some "yesterday expense");
++   
++   (* Add expense for today *)
++   TestStorage.add_expense 2000 (Some "today expense");
++   
++   (* Check that we can retrieve expenses for specific dates *)
++   let yesterday_expenses = Spendo_lib.Storage.get_expenses_for_date (-1) in
++   let today_expenses = Spendo_lib.Storage.get_expenses_for_date 0 in
++   
++   match (yesterday_expenses, today_expenses) with
++   | (Some yesterday, Some today) ->
++       check int "yesterday expense count" 1 (List.length yesterday.Spendo_lib.Types.expenses);
++       check int "today expense count" 1 (List.length today.Spendo_lib.Types.expenses);
++       
++       let yesterday_expense = List.hd yesterday.Spendo_lib.Types.expenses in
++       let today_expense = List.hd today.Spendo_lib.Types.expenses in
++       
++       check int "yesterday amount" 1000 yesterday_expense.Spendo_lib.Types.amount;
++       check int "today amount" 2000 today_expense.Spendo_lib.Types.amount;
++       check (option string) "yesterday message" (Some "yesterday expense") yesterday_expense.Spendo_lib.Types.message;
++       check (option string) "today message" (Some "today expense") today_expense.Spendo_lib.Types.message
++   | _ -> fail "Expected to find expenses for both days"
++ 
++ let test_get_expenses_for_last_n_days () =
++   (* Test getting expenses for the last N days *)
++   TestStorage.reset ();
++   
++   (* Add expenses for different days *)
++   TestStorage.add_expense 1000 (Some "day 1 expense");
++   TestStorage.add_expense 2000 (Some "day 2 expense");
++   TestStorage.add_expense 3000 (Some "day 3 expense");
++   
++   (* Get expenses for last 3 days *)
++   let expenses = Spendo_lib.Storage.get_expenses_for_last_n_days 3 in
++   
++   check int "number of days returned" 3 (List.length expenses);
++   
++   (* Check that we have expenses for each day *)
++   let rec check_expenses = function
++     | [] -> ()
++     | daily :: rest ->
++         check int "daily expense count" 1 (List.length daily.Spendo_lib.Types.expenses);
++         let expense = List.hd daily.Spendo_lib.Types.expenses in
++         check bool "expense has amount" (expense.Spendo_lib.Types.amount > 0) true;
++         check bool "expense has message" (expense.Spendo_lib.Types.message <> None) true;
++         check_expenses rest
++   in
++   check_expenses expenses
++ 
++ let test_get_expenses_for_last_n_days_with_empty_days () =
++   (* Test getting expenses for N days when some days have no expenses *)
++   TestStorage.reset ();
++   
++   (* Add expense only for yesterday *)
++   TestStorage.add_expense 1000 (Some "yesterday expense");
++   
++   (* Get expenses for last 3 days *)
++   let expenses = Spendo_lib.Storage.get_expenses_for_last_n_days 3 in
++   
++   check int "number of days returned" 3 (List.length expenses);
++   
++   (* Check that we have entries for all 3 days, even if some are empty *)
++   let rec check_days = function
++     | [] -> ()
++     | daily :: rest ->
++         check bool "daily has date" (String.length daily.Spendo_lib.Types.date > 0) true;
++         check_days rest
++   in
++   check_days expenses;
++   
++   (* Check that exactly one day has expenses *)
++   let days_with_expenses = List.filter (fun daily -> List.length daily.Spendo_lib.Types.expenses > 0) expenses in
++   check int "days with expenses" 1 (List.length days_with_expenses)
++ 
+  (* Test suite *)
+  let test_suite = [
+```
+
+</details>
+
+---
+
+I need to add the Str module to the dune file and also update the test suite to include the new tests. Let me fix the Str module issue first:
+
+
+---
+
+<details><summary>Edit file: test/dune</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -1,4 +1,4 @@
+  (test
+   (name test_spendo)
+-  (libraries spendo_lib alcotest))
++  (libraries spendo_lib alcotest str))
+  
+```
+
+</details>
+
+---
+
+Now let me update the test suite to include the new tests:
+
+
+---
+
+
+
+---
+
+
+
+---
+
