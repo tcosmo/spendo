@@ -2,7 +2,15 @@
 
 open Yojson.Safe
 
-let data_file = "spendo_data.json"
+let get_data_dir () =
+  let home = Unix.getenv "HOME" in
+  let spendo_dir = home ^ "/.spendo" in
+  (* Create directory if it doesn't exist *)
+  (try Unix.mkdir spendo_dir 0o755 with Unix.Unix_error (Unix.EEXIST, _, _) -> ());
+  spendo_dir
+
+let get_data_file () =
+  get_data_dir () ^ "/spendo_data.json"
 
 let expense_to_json expense =
   let message_json = match expense.Types.message with
@@ -39,6 +47,7 @@ let json_to_daily_expenses json =
 
 let load () =
   try
+    let data_file = get_data_file () in
     let ic = open_in data_file in
     let content = really_input_string ic (in_channel_length ic) in
     close_in ic;
@@ -49,6 +58,7 @@ let load () =
   | _ -> []
 
 let save data =
+  let data_file = get_data_file () in
   let json = `List (List.map daily_expenses_to_json data) in
   let oc = open_out data_file in
   output_string oc (to_string json);

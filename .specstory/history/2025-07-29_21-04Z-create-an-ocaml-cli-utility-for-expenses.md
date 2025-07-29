@@ -7360,92 +7360,277 @@ You can now safely refactor and extend your CLI with confidence!
 
 _**User**_
 
-how do I run the tests
+Instead of saving data locally can we save it in a folder .spendo in the user's home? 
 
 ---
 
 _**Assistant**_
 
-To run all your tests, simply use the following command from the root of your project:
+Absolutely! Let's modify the storage to save data in a `.spendo` folder in the user's home directory. This is a much better approach for a CLI tool.
 
-```sh
+
+---
+
+Read file: lib/storage.ml
+
+---
+
+Now let me update the storage module to use the user's home directory:
+
+
+---
+
+<details><summary>Edit file: lib/storage.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 9, lines removed: 1
+
+```diff
+@@ -3,5 +3,13 @@
+  open Yojson.Safe
+  
+- let data_file = "spendo_data.json"
++ let get_data_dir () =
++   let home = Unix.getenv "HOME" in
++   let spendo_dir = home ^ "/.spendo" in
++   (* Create directory if it doesn't exist *)
++   (try Unix.mkdir spendo_dir 0o755 with Unix.Unix_error (Unix.EEXIST, _, _) -> ());
++   spendo_dir
++ 
++ let get_data_file () =
++   get_data_dir () ^ "/spendo_data.json"
+  
+  let expense_to_json expense =
+```
+
+</details>
+
+---
+
+I need to update the functions that use `data_file` to use the new `get_data_file()` function:
+
+
+---
+
+<details><summary>Edit file: lib/storage.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 1, lines removed: undefined
+
+```diff
+@@ -48,4 +48,5 @@
+  let load () =
+    try
++     let data_file = get_data_file () in
+      let ic = open_in data_file in
+      let content = really_input_string ic (in_channel_length ic) in
+```
+
+**Chunk 2**
+Lines added: 1, lines removed: undefined
+
+```diff
+@@ -58,4 +59,5 @@
+  
+  let save data =
++   let data_file = get_data_file () in
+    let json = `List (List.map daily_expenses_to_json data) in
+    let oc = open_out data_file in
+```
+
+</details>
+
+---
+
+Now let me test the changes by building the project:
+
+
+---
+
+```bash
+dune build
+```
+
+```
+➜  spendo git:(main) ✗ dune build
+```
+
+---
+
+Great! Now let me test the functionality:
+
+
+---
+
+```bash
+dune exec -- bin/spendo.exe 25.50 -m "test expense"
+```
+
+```
+?➜  spendo git:(main) ?✗ dune exec -- bin/spendo.exe 25.50 -m "test expense"
+Added expense: 25.50 (test expense) 
+➜  spendo git:(main) ✗
+```
+
+---
+
+Perfect! Now let me check if the `.spendo` directory was created in the home directory:
+
+
+---
+
+```bash
+ls -la ~/.spendo/
+```
+
+```
+➜  spendo git:(main) ✗ ls -la ~/.spendo/
+total 8
+drwxr-xr-x   3 cosmo  staff    96 30 jul 00:37 .
+drwxr-x---+ 85 cosmo  staff  2720 30 jul 00:37 ..
+-rw-r--r--   1 cosmo  staff   112 30 jul 00:37 spendo_data.json
+➜  spendo git:(main) ✗
+```
+
+---
+
+Excellent! Let me check the contents of the data file:
+
+
+---
+
+```bash
+cat ~/.spendo/spendo_data.json
+```
+
+```
+[{"date":"2025-07-30","expenses":[{"amount":2550,"message":"test expense","timestamp":"2025-07-29T22:37:19Z
+"}]}]%
+
+```
+
+---
+
+Perfect! Now let me test listing the expenses:
+
+
+---
+
+```bash
+dune exec -- bin/spendo.exe -l
+```
+
+```
+?➜  spendo git:(main) ?✗ dune exec -- bin/spendo.exe -l
+Date: 2025-07-30                    
+Expenses:
+25.50 - test expense
+Total: 25.50
+➜  spendo git:(main) ✗
+```
+
+---
+
+Excellent! Let me also run the tests to make sure everything still works:
+
+
+---
+
+```bash
 dune runtest
 ```
 
-This will:
-- Build and run all test suites (including both your core logic and CLI integration tests).
-- Print a summary of which tests passed or failed.
+```
+➜  spendo git:(main) ✗ dune runtest
+Testing `spendo'.                  
+This run has ID `709EK5R9'.
 
-**You can also run a specific test executable** (for example, just the core logic tests) with:
-```sh
-dune exec -- test/test_spendo.exe
-```
-or for the CLI logic tests:
-```sh
-dune exec -- test/test_cli.exe
-```
+  [OK]          expense                    0   create expense.
+  [OK]          expense                    1   format expense with message.
+  [OK]          expense                    2   format expense without message.
+  [OK]          expense                    3   total expenses.
+  [OK]          expense                    4   format daily expenses.
+  [OK]          storage                    0   add single expense.
+  [OK]          storage                    1   add multiple expenses.
+  [OK]          json                       0   serialize expense.
+  [OK]          json                       1   deserialize expense.
+  [OK]          json                       2   deserialize expense with null message.
+  [OK]          amount conversion          0   amount conversion.
+  [OK]          amount conversion          1   edge cases.
 
-But in most cases, just use:
-```sh
-dune runtest
+Full test results in `~/Documents/projects/spendo/_build/default/test/_build/_tests/spendo'.
+Test Successful in 0.002s. 12 tests run.
+➜  spendo git:(main) ✗
 ```
-and Dune will handle everything for you!
 
 ---
 
-_**User**_
+Perfect! Let me also update the README to document this change:
 
-dune runtest prints nothing
 
 ---
 
-_**Assistant**_
-
-If `dune runtest` prints nothing, it usually means that:
-- All tests passed, and Dune is running in its default "quiet" mode.
-- Or, Dune did not find any tests to run (e.g., no `(tests ...)` stanzas, or test executables not built).
-
-**To see detailed output and test logs, use:**
-
-```sh
-dune runtest --display=short
-```
-or for even more verbosity:
-```sh
-dune runtest --display=verbose
-```
-
-**To see test output even for passing tests:**
-```sh
-dune runtest --force --display=short
-```
-
-**To run a specific test and see its output:**
-```sh
-dune exec -- test/test_spendo.exe
-```
-or
-```sh
-dune exec -- test/test_cli.exe
-```
-
-**If you still see nothing:**
-- Make sure you have a `test/` directory with test files and a `test/dune` file with `(test ...)` stanzas.
-- Make sure your test executables are being built (run `ls _build/default/test/` to check for `test_spendo.exe` and `test_cli.exe`).
-
-Let me know if you want to troubleshoot further or if you want to see the output of a specific test!
+Read file: README.md
 
 ---
 
-_**User**_
+<details><summary>Edit file: README.md</summary>
 
-Can we add a -n option that shows the expenses for the last n days with today the last one
+undefined
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -40,5 +40,5 @@
+  ## Data Storage
+  
+- Expenses are stored in `spendo_data.json` in the current directory using a standard JSON format:
++ Expenses are stored in `~/.spendo/spendo_data.json` using a standard JSON format. The `.spendo` directory is automatically created in your home directory when you first use the application.
+  
+  ```json
+```
+
+</details>
 
 ---
 
-_**Assistant**_
+Perfect! The changes have been successfully implemented. Here's a summary of what was done:
 
+## Changes Made
 
+1. **Updated Storage Location**: 
+   - Data is now stored in `~/.spendo/spendo_data.json` instead of the current directory
+   - The `.spendo` directory is automatically created in the user's home directory
+
+2. **Modified `lib/storage.ml`**:
+   - Added `get_data_dir()` function to get the home directory path and create the `.spendo` directory
+   - Added `get_data_file()` function to get the full path to the data file
+   - Updated `load()` and `save()` functions to use the new file path
+
+3. **Updated Documentation**:
+   - Updated the README to reflect the new storage location
+
+## Benefits
+
+- **Better Organization**: Data is stored in a dedicated directory in the user's home
+- **No Clutter**: Doesn't pollute the current working directory
+- **Standard Practice**: Follows the common pattern of storing application data in `~/.appname/`
+- **Automatic Setup**: Creates the directory structure automatically on first use
+
+## Testing
+
+The functionality has been tested and works correctly:
+- ✅ Adding expenses works
+- ✅ Listing expenses works  
+- ✅ Data is properly stored in `~/.spendo/spendo_data.json`
+- ✅ All existing tests still pass
+
+The application now follows standard CLI tool conventions by storing data in the user's home directory!
 
 ---
 
