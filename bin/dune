@@ -1,0 +1,3 @@
+(executable
+ (name spendo)
+ (libraries spendo_lib))

@@ -1,0 +1,27 @@
+[
+    {
+        "date": "2025-07-29",
+        "expenses": [
+            {
+                "amount": 2540,
+                "message": null,
+                "timestamp": "2025-07-29T21:32:53Z"
+            },
+            {
+                "amount": 2540,
+                "message": null,
+                "timestamp": "1753824667.2"
+            },
+            {
+                "amount": 500,
+                "message": null,
+                "timestamp": "now"
+            },
+            {
+                "amount": 1575,
+                "message": "dinner",
+                "timestamp": "now"
+            }
+        ]
+    }
+]
