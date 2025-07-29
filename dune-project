@@ -3,7 +3,7 @@
 (name spendo)
 
 (source
- (github username/spendo))
+ (github tcosmo/spendo))
 
 (generate_opam_files true)
 
@@ -19,5 +19,6 @@
    (>= 3.0))
   (unix :build)
   (yojson :build)
-  (cmdliner :build))
+  (cmdliner :build)
+  (alcotest :dev))
  (allow_empty))

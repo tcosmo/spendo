@@ -3,14 +3,15 @@ opam-version: "2.0"
 synopsis: "A simple CLI utility for tracking daily expenses"
 description:
   "Spendo is a command-line tool for tracking daily expenses with optional categorization."
-homepage: "https://github.com/username/spendo"
-bug-reports: "https://github.com/username/spendo/issues"
+homepage: "https://github.com/tcosmo/spendo"
+bug-reports: "https://github.com/tcosmo/spendo/issues"
 depends: [
   "ocaml" {>= "4.14.0"}
   "dune" {>= "3.0" & >= "3.0"}
   "unix" {build}
   "yojson" {build}
   "cmdliner" {build}
+  "alcotest" {dev}
   "odoc" {with-doc}
 ]
 build: [
@@ -27,4 +28,4 @@ build: [
     "@doc" {with-doc}
   ]
 ]
-dev-repo: "git+https://github.com/username/spendo.git"
+dev-repo: "git+https://github.com/tcosmo/spendo.git"
