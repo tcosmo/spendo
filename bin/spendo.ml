@@ -51,7 +51,7 @@ let cmd =
     | (None, _) -> list_expenses ()
     | (Some amt, false) -> add_expense amt message
     | (Some _, true) -> list_expenses ()
-    (* | _ -> print_endline "Try 'spendo --help' for more information" *)
+    (* | (None, false) -> print_endline "Error: Amount is required"; print_endline "Try 'spendo --help' for more information" *)
     ) 
     $ amount_arg $ message_arg $ list_flag) in
   Cmd.v (Cmd.info "spendo" ~version:"1.0.0" ~doc ~man) term

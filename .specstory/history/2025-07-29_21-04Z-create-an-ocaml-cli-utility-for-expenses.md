@@ -7437,3 +7437,15 @@ Let me know if you want to troubleshoot further or if you want to see the output
 
 ---
 
+_**User**_
+
+Can we add a -n option that shows the expenses for the last n days with today the last one
+
+---
+
+_**Assistant**_
+
+
+
+---
+
