@@ -6,7 +6,8 @@ let add_expense amount message date_offset =
     let amount_float = float_of_string amount in
     let amount_cents = int_of_float (amount_float *. 100.0) in
     Spendo_lib.Storage.add_expense amount_cents message date_offset;
-    Printf.printf "Added expense: %.2f" amount_float;
+    let target_date = Spendo_lib.Storage.get_date_offset date_offset in
+    Printf.printf "Today's date: %s\nAdded expense: %.2f" target_date amount_float;
     (match message with
      | Some msg -> Printf.printf " (%s)" msg
      | None -> ());
@@ -25,7 +26,7 @@ let list_expenses days =
     | Some daily ->
         print_endline (Spendo_lib.Expense.format_daily_expenses daily)
     | None ->
-        print_endline "No expenses for today"
+        print_endline "No expenses recorded for today"
   else
     let expenses = Spendo_lib.Storage.get_expenses_for_last_n_days days in
     match expenses with
