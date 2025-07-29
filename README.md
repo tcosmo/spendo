@@ -22,6 +22,9 @@ spendo 25.4 -m "yesterday's lunch" -d 1
 
 # List today's expenses
 spendo -l
+
+# List expenses for the last 4 days
+spendo -n 4
 ```
 
 ## Building
@@ -109,4 +112,20 @@ Expenses:
 25.00 - lunch
 15.50 - coffee
 Total: 40.50
+
+$ spendo -n 3
+Date: 2024-01-13
+Expenses:
+12.75 - yesterday's dinner
+Total: 12.75
+
+Date: 2024-01-14
+Expenses:
+15.50 - coffee
+Total: 15.50
+
+Date: 2024-01-15
+Expenses:
+25.00 - lunch
+Total: 25.00
 ``` 

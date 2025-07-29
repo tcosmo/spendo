@@ -99,4 +99,26 @@ let get_expenses_for_date date_offset =
   let data = load () in
   List.find_opt (fun daily -> daily.Types.date = target_date) data
 
+let get_expenses_for_last_n_days n =
+  let rec get_dates acc days_back =
+    if days_back >= n then acc
+    else
+      let date = get_date_offset (-days_back) in
+      get_dates (date :: acc) (days_back + 1)
+  in
+  let target_dates = get_dates [] 0 in
+  let data = load () in
+  let rec find_expenses_for_dates dates data =
+    match dates with
+    | [] -> []
+    | date :: rest ->
+        let daily_expenses = List.find_opt (fun daily -> daily.Types.date = date) data in
+        match daily_expenses with
+        | Some expenses -> expenses :: find_expenses_for_dates rest data
+        | None -> 
+            (* Create empty daily expenses for dates with no data *)
+            { Types.date = date; expenses = [] } :: find_expenses_for_dates rest data
+  in
+  find_expenses_for_dates target_dates data
+
 let get_today_expenses () = get_expenses_for_date 0 

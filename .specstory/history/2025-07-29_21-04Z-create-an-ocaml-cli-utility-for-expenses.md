@@ -8310,11 +8310,950 @@ Now let me test the new functionality:
 
 ---
 
+```bash
+dune exec -- bin/spendo.exe 15.50 -m "yesterday's lunch" -d -1
+```
+
+```
+?➜  spendo git:(main) ?✗ dune exec -- bin/spendo.exe 15.50 -m "yesterday's lunch" -d -1
+spendo: unknown option '-1'.        
+Usage: spendo [--date=DAYS] [--list] [--message=MESSAGE] [OPTION]… [AMOUNT]
+Try 'spendo --help' for more information.
+➜  spendo git:(main) ✗
+```
+
+---
+
+I see the issue - the argument parsing is interpreting `-1` as a separate option. Let me fix this by using the long form:
 
 
 ---
 
+```bash
+dune exec -- bin/spendo.exe 15.50 -m "yesterday's lunch" --date=-1
+```
 
+---
+
+_**User**_
+
+Great I just negated the -d param so that user does not have to input negative value, can you update readme and suggest commit message for the change?
+
+---
+
+_**Assistant**_
+
+Great idea! That makes the interface much more intuitive. Let me update the README and suggest a commit message.
+
+
+---
+
+Read file: README.md
+
+---
+
+<details><summary>Edit file: README.md</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 3, lines removed: undefined
+
+```diff
+@@ -17,4 +17,7 @@
+  # Add an expense with a message
+  spendo 25.4 -m "food"
++ 
++ # Add an expense for a previous day
++ spendo 25.4 -m "yesterday's lunch" -d 1
+  
+  # List today's expenses
+```
+
+</details>
+
+---
+
+<details><summary>Edit file: README.md</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 3, lines removed: undefined
+
+```diff
+@@ -100,4 +100,7 @@
+  $ spendo 25.00 -m "lunch"
+  Added expense: 25.00 (lunch)
++ 
++ $ spendo 12.75 -m "yesterday's dinner" -d 1
++ Added expense: 12.75 (yesterday's dinner) (1 days ago)
+  
+  $ spendo -l
+```
+
+</details>
+
+---
+
+Now let me test the functionality to make sure it works:
+
+
+---
+
+```bash
+dune exec -- bin/spendo.exe 15.50 -m "yesterday's lunch" -d 1
+```
+
+```
+➜  spendo git:(main) ✗ dune exec -- bin/spendo.exe 15.50 -m "yesterday's lunch" -d 1
+Added expense: 15.50 (yesterday's lunch) (1 days ago)
+➜  spendo git:(main) ✗
+```
+
+---
+
+Perfect! Let me also test listing expenses to see if it shows the correct date:
+
+
+---
+
+```bash
+dune exec -- bin/spendo.exe -l
+```
+
+```
+➜  spendo git:(main) ✗ dune exec -- bin/spendo.exe -l
+No expenses for today               
+➜  spendo git:(main) ✗
+```
+
+---
+
+Great! The expense was added to yesterday's date, not today's. Let me check the data file to confirm:
+
+
+---
+
+```bash
+cat ~/.spendo/spendo_data.json
+```
+
+```
+[{"date":"2025-07-29","expenses":[{"amount":1550,"message":"yesterday's lunch","timestamp":"2025-07-29T22:4
+7:11Z"},{"amount":500,"message":"guinguette cash","timestamp":"2025-07-29T21:56:05Z"},{"amount":994,"messag
+e":"monop CCF","timestamp":"2025-07-29T21:55:55Z"}]}]%
+
+```
+
+---
+
+Perfect! The expense was correctly added to 2025-07-29 (yesterday). Now let me run the tests to make sure everything still works:
+
+
+---
+
+```bash
+dune runtest
+```
+
+```
+?➜  spendo git:(main) ?✗ dune runtest
+Testing `spendo'.                  
+This run has ID `1X50A5MS'.
+
+  [OK]          expense                    0   create expense.
+  [OK]          expense                    1   format expense with message.
+  [OK]          expense                    2   format expense without message.
+  [OK]          expense                    3   total expenses.
+  [OK]          expense                    4   format daily expenses.
+  [OK]          storage                    0   add single expense.
+  [OK]          storage                    1   add multiple expenses.
+  [OK]          json                       0   serialize expense.
+  [OK]          json                       1   deserialize expense.
+  [OK]          json                       2   deserialize expense with null message.
+  [OK]          amount conversion          0   amount conversion.
+  [OK]          amount conversion          1   edge cases.
+
+Full test results in `~/Documents/projects/spendo/_build/default/test/_build/_tests/spendo'.
+Test Successful in 0.002s. 12 tests run.
+➜  spendo git:(main) ✗
+```
+
+---
+
+Excellent! All tests pass. Now let me check the git status and suggest a commit message:
+
+
+---
+
+```bash
+git status
+```
+
+```
+➜  spendo git:(main) ✗ git status
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+        modified:   .specstory/history/2025-07-29_21-04Z-create-an-ocaml-cli-utility-for-expenses.md
+        modified:   README.md
+        modified:   bin/spendo.ml
+        modified:   lib/storage.ml
+
+no changes added to commit (use "git add" and/or "git commit -a")
+➜  spendo git:(main) ✗
+```
+
+---
+
+Perfect! Here's a suggested commit message for the changes:
+
+**Suggested commit message:**
+```
+feat: add -d option to specify date offset for expenses
+
+- Add date_offset parameter to add_expense function
+- Support adding expenses for previous days (e.g., -d 1 for yesterday)
+- Update CLI to accept -d/--date argument with intuitive positive values
+- Update README with usage examples
+- All existing tests still pass
+```
+
+The changes include:
+1. **Storage module**: Added `get_date_offset()` function and updated `add_expense()` to accept a date offset parameter
+2. **CLI module**: Added `-d/--date` argument with intuitive positive values (1 = yesterday, 2 = 2 days ago, etc.)
+3. **README**: Updated with usage examples showing the new `-d` option
+4. **User experience**: The interface is intuitive - users don't need to remember negative values
+
+The feature works perfectly - I tested adding an expense with `-d 1` and it correctly stored it in yesterday's date, and the output shows "(1 days ago)" to confirm the action.
+
+---
+
+_**User**_
+
+Great, let's add a -n option so that `spendo -n 4` shows the expenses of the last four days (showing today last), if there are less than 4 days, it shows all of them
+
+---
+
+_**Assistant**_
+
+Great idea! Let me add a `-n` option to show expenses for the last N days. I'll need to modify the storage module to get expenses for multiple days and update the CLI.
+
+
+---
+
+Read file: lib/storage.ml
+
+---
+
+Now I'll add a function to get expenses for the last N days:
+
+
+---
+
+<details><summary>Edit file: lib/storage.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 20, lines removed: undefined
+
+```diff
+@@ -100,3 +100,23 @@
+    List.find_opt (fun daily -> daily.Types.date = target_date) data
+  
++ let get_expenses_for_last_n_days n =
++   let rec get_dates acc days_back =
++     if days_back >= n then acc
++     else
++       let date = get_date_offset (-days_back) in
++       get_dates (date :: acc) (days_back + 1)
++   in
++   let target_dates = get_dates [] 0 in
++   let data = load () in
++   let rec find_expenses_for_dates dates data =
++     match dates with
++     | [] -> []
++     | date :: rest ->
++         let daily_expenses = List.find_opt (fun daily -> daily.Types.date = date) data in
++         match daily_expenses with
++         | Some expenses -> expenses :: find_expenses_for_dates rest data
++         | None -> find_expenses_for_dates rest data
++   in
++   find_expenses_for_dates target_dates data
++ 
+  let get_today_expenses () = get_expenses_for_date 0 
+```
+
+</details>
+
+---
+
+Now I need to update the CLI to add the `-n` option and modify the list function:
+
+
+---
+
+<details><summary>Edit file: bin/spendo.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 12, lines removed: 1
+
+```diff
+@@ -20,10 +20,21 @@
+        print_endline "Error: Invalid amount"
+  
+- let list_expenses () =
++ let list_expenses days =
++   if days = 1 then
+      match Spendo_lib.Storage.get_today_expenses () with
+      | Some daily ->
+          print_endline (Spendo_lib.Expense.format_daily_expenses daily)
+      | None ->
+          print_endline "No expenses for today"
++   else
++     let expenses = Spendo_lib.Storage.get_expenses_for_last_n_days days in
++     match expenses with
++     | [] ->
++         print_endline "No expenses for the last days"
++     | daily_list ->
++         List.iter (fun daily ->
++           print_endline (Spendo_lib.Expense.format_daily_expenses daily);
++           print_endline ""
++         ) daily_list
+  
+  (* Command line arguments *)
+```
+
+</details>
+
+---
+
+I need to add the `-n` argument and update the main command logic. Let me fix this:
+
+
+---
+
+<details><summary>Edit file: bin/spendo.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 4, lines removed: undefined
+
+```diff
+@@ -55,4 +55,8 @@
+    Arg.(value & flag & info ["l"; "list"] ~doc)
+  
++ let days_arg =
++   let doc = "Number of days to show (default: 1)" in
++   Arg.(value & opt int 1 & info ["n"] ~docv:"DAYS" ~doc)
++ 
+  (* Main command *)
+  let cmd =
+```
+
+</details>
+
+---
+
+Now I need to update the main command to include the days argument and fix the logic:
+
+
+---
+
+The string to replace was not found in the file.
+
+---
+
+Let me read the current file to see the exact content:
+
+
+---
+
+Read file: bin/spendo.ml
+
+---
+
+Now I can see the exact content. Let me update the main command:
+
+
+---
+
+<details><summary>Edit file: bin/spendo.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 4, lines removed: 4
+
+```diff
+@@ -70,12 +70,12 @@
+      `P "spendo -l";
+    ] in
+-   let term = Term.(const (fun amount message date_offset list ->
++   let term = Term.(const (fun amount message date_offset list days ->
+      match (amount, list) with
+-     | (None, _) -> list_expenses ()
++     | (None, _) -> list_expenses days
+      | (Some amt, false) -> add_expense amt message (-1*date_offset)
+-     | (Some _, true) -> list_expenses ()
++     | (Some _, true) -> list_expenses days
+      (* | (None, false) -> print_endline "Error: Amount is required"; print_endline "Try 'spendo --help' for more information" *)
+      ) 
+-     $ amount_arg $ message_arg $ date_offset_arg $ list_flag) in
++     $ amount_arg $ message_arg $ date_offset_arg $ list_flag $ days_arg) in
+    Cmd.v (Cmd.info "spendo" ~version:"1.0.0" ~doc ~man) term
+  
+```
+
+</details>
+
+---
+
+I need to build the project first to make sure the storage module changes are compiled:
+
+
+---
+
+```bash
+dune build
+```
+
+```
+➜  spendo git:(main) ✗ dune build
+```
+
+---
+
+Now let me test the new functionality:
+
+
+---
+
+```bash
+dune exec -- bin/spendo.exe -n 3
+```
+
+```
+?➜  spendo git:(main) ?✗ dune exec -- bin/spendo.exe -n 3
+Date: 2025-07-29                    
+Expenses:
+15.50 - yesterday's lunch
+5.00 - guinguette cash
+9.94 - monop CCF
+Total: 30.44
+
+➜  spendo git:(main) ✗
+```
+
+---
+
+Great! It's working. Let me test with a larger number to see if it shows multiple days:
+
+
+---
+
+```bash
+dune exec -- bin/spendo.exe -n 5
+```
+
+```
+➜  spendo git:(main) ✗ dune exec -- bin/spendo.exe -n 5
+Date: 2025-07-29                    
+Expenses:
+15.50 - yesterday's lunch
+5.00 - guinguette cash
+9.94 - monop CCF
+Total: 30.44
+
+➜  spendo git:(main) ✗
+```
+
+---
+
+Perfect! It shows the available data (only yesterday had expenses). Let me also test the help to see the new option:
+
+
+---
+
+```bash
+dune exec -- bin/spendo.exe --help
+```
+
+```
+➜  spendo git:(main) ✗ dune exec -- bin/spendo.exe --help
+SPENDO(1)                        Spendo Manual                       SPENDO(1)
+
+NAME
+       spendo - A simple CLI utility for tracking daily expenses
+
+SYNOPSIS
+       spendo [OPTION]… [AMOUNT]
+
+DESCRIPTION
+       Spendo is a command-line tool for tracking daily expenses.
+
+ARGUMENTS
+       AMOUNT
+           Amount to add as expense
+
+OPTIONS
+       -d DAYS, --date=DAYS (absent=0)
+           Date offset in days (0=today, 1=yesterday, etc.)
+
+       -l, --list
+           List today's expenses
+
+       -m MESSAGE, --message=MESSAGE
+           Optional message describing the expense
+
+       -n DAYS (absent=1)
+           Number of days to show (default: 1)
+
+COMMON OPTIONS
+       --help[=FMT] (default=auto)
+           Show this help in format FMT. The value FMT must be one of auto,
+           pager, groff or plain. With auto, the format is pager or plain
+           whenever the TERM env var is dumb or undefined.
+
+       --version
+           Show version information.
+
+EXIT STATUS
+       spendo exits with:
+
+       0   on success.
+
+       123 on indiscriminate errors reported on standard error.
+
+       124 on command line parsing errors.
+
+       125 on unexpected internal errors (bugs).
+
+EXAMPLES
+       spendo 25.4
+
+       spendo 25.4 -m "food"
+
+       spendo -l
+
+Spendo 1.0.0                                                         SPENDO(1)
+➜  spendo git:(main) ✗
+```
+
+---
+
+Excellent! Now let me update the README to document the new `-n` option:
+
+
+---
+
+<details><summary>Edit file: README.md</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 3, lines removed: undefined
+
+```diff
+@@ -23,4 +23,7 @@
+  # List today's expenses
+  spendo -l
++ 
++ # List expenses for the last 4 days
++ spendo -n 4
+  ```
+  
+```
+
+</details>
+
+---
+
+<details><summary>Edit file: README.md</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 16, lines removed: undefined
+
+```diff
+@@ -113,3 +113,19 @@
+  15.50 - coffee
+  Total: 40.50
++ 
++ $ spendo -n 3
++ Date: 2024-01-13
++ Expenses:
++ 12.75 - yesterday's dinner
++ Total: 12.75
++ 
++ Date: 2024-01-14
++ Expenses:
++ 15.50 - coffee
++ Total: 15.50
++ 
++ Date: 2024-01-15
++ Expenses:
++ 25.00 - lunch
++ Total: 25.00
+  ``` 
+```
+
+</details>
+
+---
+
+Now let me run the tests to make sure everything still works:
+
+
+---
+
+```bash
+dune runtest
+```
+
+```
+➜  spendo git:(main) ✗ dune runtest
+Testing `spendo'.                  
+This run has ID `G8COTB7H'.
+
+  [OK]          expense                    0   create expense.
+  [OK]          expense                    1   format expense with message.
+  [OK]          expense                    2   format expense without message.
+  [OK]          expense                    3   total expenses.
+  [OK]          expense                    4   format daily expenses.
+  [OK]          storage                    0   add single expense.
+  [OK]          storage                    1   add multiple expenses.
+  [OK]          json                       0   serialize expense.
+  [OK]          json                       1   deserialize expense.
+  [OK]          json                       2   deserialize expense with null message.
+  [OK]          amount conversion          0   amount conversion.
+  [OK]          amount conversion          1   edge cases.
+
+Full test results in `~/Documents/projects/spendo/_build/default/test/_build/_tests/spendo'.
+Test Successful in 0.002s. 12 tests run.
+➜  spendo git:(main) ✗
+```
+
+---
+
+Perfect! All tests pass. Let me check the git status:
+
+
+---
+
+```bash
+git status
+```
+
+```
+➜  spendo git:(main) ✗ git status
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+        modified:   .specstory/history/2025-07-29_21-04Z-create-an-ocaml-cli-utility-for-expenses.md
+        modified:   bin/spendo.ml
+        modified:   lib/storage.ml
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+        modified:   README.md
+
+➜  spendo git:(main) ✗
+```
+
+---
+
+Excellent! The `-n` option has been successfully implemented. Here's a summary of what was added:
+
+## Changes Made
+
+1. **Storage Module (`lib/storage.ml`)**:
+   - Added `get_expenses_for_last_n_days(n)` function that retrieves expenses for the last N days
+   - The function gets dates for the last N days and finds expenses for each date
+   - Returns a list of daily expenses, showing today last
+
+2. **CLI Module (`bin/spendo.ml`)**:
+   - Added `-n` argument with default value of 1
+   - Updated `list_expenses()` to accept a days parameter
+   - Modified the main command to pass the days argument to list_expenses
+   - When `days = 1`, it shows only today's expenses (backward compatible)
+   - When `days > 1`, it shows expenses for the last N days
+
+3. **README Updates**:
+   - Added usage example for `spendo -n 4`
+   - Added comprehensive example showing multiple days of expenses
+
+## Features
+
+- **Backward Compatible**: `spendo -l` still works and shows today's expenses
+- **Flexible Range**: `spendo -n 4` shows the last 4 days (today + 3 previous days)
+- **Smart Display**: If there are fewer than N days with data, it shows all available days
+- **Chronological Order**: Shows days in chronological order (oldest first, today last)
+
+## Testing
+
+The functionality works perfectly:
+- ✅ `spendo -n 3` shows expenses for the last 3 days
+- ✅ `spendo -n 5` shows all available data when there are fewer than 5 days
+- ✅ All existing tests still pass
+- ✅ Help documentation shows the new `-n` option
+
+**Suggested commit message:**
+```
+feat: add -n option to show expenses for last N days
+
+- Add get_expenses_for_last_n_days() function to storage module
+- Add -n argument to CLI with default value of 1
+- Update list_expenses() to handle multiple days
+- Show expenses in chronological order (oldest first, today last)
+- Update README with usage examples
+- All existing tests still pass
+```
+
+---
+
+_**User**_
+
+If there is no data for one of these days (including today) let's print the date and say there are no expenses recorded for that day
+
+---
+
+_**Assistant**_
+
+Great idea! Let me modify the storage and CLI functions to show all requested days, even if there are no expenses for some of them.
+
+
+---
+
+<details><summary>Edit file: lib/storage.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 3, lines removed: 1
+
+```diff
+@@ -116,5 +116,7 @@
+          match daily_expenses with
+          | Some expenses -> expenses :: find_expenses_for_dates rest data
+-         | None -> find_expenses_for_dates rest data
++         | None -> 
++             (* Create empty daily expenses for dates with no data *)
++             { Types.date = date; expenses = [] } :: find_expenses_for_dates rest data
+    in
+    find_expenses_for_dates target_dates data
+```
+
+</details>
+
+---
+
+Now I need to update the CLI to handle empty daily expenses and show a message for days with no expenses:
+
+
+---
+
+<details><summary>Edit file: bin/spendo.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 3, lines removed: undefined
+
+```diff
+@@ -34,4 +34,7 @@
+      | daily_list ->
+          List.iter (fun daily ->
++           if List.length daily.Spendo_lib.Types.expenses = 0 then
++             Printf.printf "Date: %s\nNo expenses recorded for this day\n" daily.Spendo_lib.Types.date
++           else
+              print_endline (Spendo_lib.Expense.format_daily_expenses daily);
+            print_endline ""
+```
+
+</details>
+
+---
+
+Now let me build and test the changes:
+
+
+---
+
+```bash
+dune build
+```
+
+```
+➜  spendo git:(main) ✗ dune build
+```
+
+---
+
+Now let me test the functionality:
+
+
+---
+
+```bash
+dune exec -- bin/spendo.exe -n 5
+```
+
+```
+?➜  spendo git:(main) ?✗ dune exec -- bin/spendo.exe -n 5
+Date: 2025-07-26                    
+No expenses recorded for this day
+
+Date: 2025-07-27
+No expenses recorded for this day
+
+Date: 2025-07-28
+No expenses recorded for this day
+
+Date: 2025-07-29
+Expenses:
+15.50 - yesterday's lunch
+5.00 - guinguette cash
+9.94 - monop CCF
+Total: 30.44
+
+Date: 2025-07-30
+No expenses recorded for this day
+
+➜  spendo git:(main) ✗
+```
+
+---
+
+Perfect! Let me test with a smaller range to make sure it still works correctly:
+
+
+---
+
+```bash
+dune exec -- bin/spendo.exe -n 3
+```
+
+```
+➜  spendo git:(main) ✗ dune exec -- bin/spendo.exe -n 3
+Date: 2025-07-28                    
+No expenses recorded for this day
+
+Date: 2025-07-29
+Expenses:
+15.50 - yesterday's lunch
+5.00 - guinguette cash
+9.94 - monop CCF
+Total: 30.44
+
+Date: 2025-07-30
+No expenses recorded for this day
+
+➜  spendo git:(main) ✗
+```
+
+---
+
+Excellent! Let me also test the single day case to make sure it still works:
+
+
+---
+
+```bash
+dune exec -- bin/spendo.exe -l
+```
+
+```
+➜  spendo git:(main) ✗ dune exec -- bin/spendo.exe -l
+No expenses for today               
+➜  spendo git:(main) ✗
+```
+
+---
+
+Perfect! Let me run the tests to make sure everything still works:
+
+
+---
+
+```bash
+dune runtest
+```
+
+```
+➜  spendo git:(main) ✗ dune runtest
+Testing `spendo'.                  
+This run has ID `HJW6DX3X'.
+
+  [OK]          expense                    0   create expense.
+  [OK]          expense                    1   format expense with message.
+  [OK]          expense                    2   format expense without message.
+  [OK]          expense                    3   total expenses.
+  [OK]          expense                    4   format daily expenses.
+  [OK]          storage                    0   add single expense.
+  [OK]          storage                    1   add multiple expenses.
+  [OK]          json                       0   serialize expense.
+  [OK]          json                       1   deserialize expense.
+  [OK]          json                       2   deserialize expense with null message.
+  [OK]          amount conversion          0   amount conversion.
+  [OK]          amount conversion          1   edge cases.
+
+Full test results in `~/Documents/projects/spendo/_build/default/test/_build/_tests/spendo'.
+Test Successful in 0.002s. 12 tests run.
+➜  spendo git:(main) ✗
+```
+
+---
+
+Excellent! The changes have been successfully implemented. Here's a summary of what was improved:
+
+## Changes Made
+
+1. **Storage Module (`lib/storage.ml`)**:
+   - Modified `get_expenses_for_last_n_days()` to return empty daily expenses for dates with no data
+   - Instead of skipping dates with no expenses, it now creates `{ date = date; expenses = [] }` entries
+
+2. **CLI Module (`bin/spendo.ml`)**:
+   - Updated `list_expenses()` to check if a day has no expenses
+   - For days with no expenses, it shows: `Date: YYYY-MM-DD\nNo expenses recorded for this day`
+   - For days with expenses, it shows the normal formatted output
+
+## Benefits
+
+- **Complete Coverage**: Shows all requested days, even if there are no expenses
+- **Clear Information**: Users can see exactly which days have no expenses
+- **Chronological Order**: Days are shown in chronological order (oldest first, today last)
+- **Consistent Format**: Each day gets its own section with clear date headers
+
+## Testing Results
+
+The functionality works perfectly:
+- ✅ `spendo -n 5` shows all 5 days with clear "No expenses recorded for this day" messages for empty days
+- ✅ `spendo -n 3` shows the last 3 days with appropriate messages
+- ✅ `spendo -l` still works correctly for single day view
+- ✅ All existing tests still pass
+
+**Suggested commit message:**
+```
+feat: show all requested days in -n output, even if empty
+
+- Modify get_expenses_for_last_n_days() to return empty entries for dates with no data
+- Update list_expenses() to show "No expenses recorded for this day" for empty days
+- Provide complete chronological view of requested date range
+- All existing tests still pass
+```
 
 ---
 

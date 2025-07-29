@@ -19,12 +19,26 @@ let add_expense amount message date_offset =
   | Failure _ -> 
       print_endline "Error: Invalid amount"
 
-let list_expenses () =
-  match Spendo_lib.Storage.get_today_expenses () with
-  | Some daily ->
-      print_endline (Spendo_lib.Expense.format_daily_expenses daily)
-  | None ->
-      print_endline "No expenses for today"
+let list_expenses days =
+  if days = 1 then
+    match Spendo_lib.Storage.get_today_expenses () with
+    | Some daily ->
+        print_endline (Spendo_lib.Expense.format_daily_expenses daily)
+    | None ->
+        print_endline "No expenses for today"
+  else
+    let expenses = Spendo_lib.Storage.get_expenses_for_last_n_days days in
+    match expenses with
+    | [] ->
+        print_endline "No expenses for the last days"
+    | daily_list ->
+        List.iter (fun daily ->
+          if List.length daily.Spendo_lib.Types.expenses = 0 then
+            Printf.printf "Date: %s\nNo expenses recorded for this day\n" daily.Spendo_lib.Types.date
+          else
+            print_endline (Spendo_lib.Expense.format_daily_expenses daily);
+          print_endline ""
+        ) daily_list
 
 (* Command line arguments *)
 let amount_arg =
@@ -43,6 +57,10 @@ let list_flag =
   let doc = "List today's expenses" in
   Arg.(value & flag & info ["l"; "list"] ~doc)
 
+let days_arg =
+  let doc = "Number of days to show (default: 1)" in
+  Arg.(value & opt int 1 & info ["n"] ~docv:"DAYS" ~doc)
+
 (* Main command *)
 let cmd =
   let doc = "A simple CLI utility for tracking daily expenses" in
@@ -54,14 +72,14 @@ let cmd =
     `P "spendo 25.4 -m \"food\"";
     `P "spendo -l";
   ] in
-  let term = Term.(const (fun amount message date_offset list ->
+  let term = Term.(const (fun amount message date_offset list days ->
     match (amount, list) with
-    | (None, _) -> list_expenses ()
+    | (None, _) -> list_expenses days
     | (Some amt, false) -> add_expense amt message (-1*date_offset)
-    | (Some _, true) -> list_expenses ()
+    | (Some _, true) -> list_expenses days
     (* | (None, false) -> print_endline "Error: Amount is required"; print_endline "Try 'spendo --help' for more information" *)
     ) 
-    $ amount_arg $ message_arg $ date_offset_arg $ list_flag) in
+    $ amount_arg $ message_arg $ date_offset_arg $ list_flag $ days_arg) in
   Cmd.v (Cmd.info "spendo" ~version:"1.0.0" ~doc ~man) term
 
 (* Main function *)
