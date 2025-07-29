@@ -10,8 +10,31 @@ let iso8601_of_timestamp (timestamp : float) : string =
     tm.Unix.tm_min
     tm.Unix.tm_sec
 
+let iso8601_of_timestamp_local (timestamp : float) : string =
+  let open Unix in
+  let tm = localtime timestamp in
+  let offset_seconds =
+    let local_sec = fst (mktime tm) in
+    let gmt_sec = fst (mktime (gmtime timestamp)) in
+    int_of_float (local_sec -. gmt_sec)
+  in
+  let sign = if offset_seconds >= 0 then '+' else '-' in
+  let abs_offset = abs offset_seconds in
+  let hours = abs_offset / 3600 in
+  let minutes = (abs_offset mod 3600) / 60 in
+  Printf.sprintf "%04d-%02d-%02dT%02d:%02d:%02d%c%02d:%02d"
+    (tm.tm_year + 1900)
+    (tm.tm_mon + 1)
+    tm.tm_mday
+    tm.tm_hour
+    tm.tm_min
+    tm.tm_sec
+    sign
+    hours
+    minutes
+
 let create_expense amount message =
-  let timestamp = iso8601_of_timestamp (Unix.gettimeofday ()) in
+  let timestamp = iso8601_of_timestamp_local (Unix.gettimeofday ()) in
   { Types.amount; message; timestamp }
 
 let total_expenses expenses =
