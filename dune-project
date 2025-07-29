@@ -18,5 +18,6 @@
   (dune
    (>= 3.0))
   (unix :build)
-  (yojson :build))
+  (yojson :build)
+  (cmdliner :build))
  (allow_empty))

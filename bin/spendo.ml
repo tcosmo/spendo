@@ -1,6 +1,7 @@
-(* CLI functions *)
+open Cmdliner
 
-let add_expense_cli amount message =
+(* CLI functions *)
+let add_expense amount message =
   try
     let amount_float = float_of_string amount in
     let amount_cents = int_of_float (amount_float *. 100.0) in
@@ -14,35 +15,46 @@ let add_expense_cli amount message =
   | Failure _ -> 
       print_endline "Error: Invalid amount"
 
-let list_expenses_cli () =
+let list_expenses () =
   match Spendo_lib.Storage.get_today_expenses () with
   | Some daily ->
       print_endline (Spendo_lib.Expense.format_daily_expenses daily)
   | None ->
       print_endline "No expenses for today"
 
-let print_usage () =
-  print_endline "Usage:";
-  print_endline "  spendo <amount> [-m <message>]  Add an expense";
-  print_endline "  spendo -l                       List today's expenses";
-  print_endline "";
-  print_endline "Examples:";
-  print_endline "  spendo 25.4";
-  print_endline "  spendo 25.4 -m \"food\"";
-  print_endline "  spendo -l"
+(* Command line arguments *)
+let amount_arg =
+  let doc = "Amount to add as expense" in
+  Arg.(value & pos 0 (some string) None & info [] ~docv:"AMOUNT" ~doc)
+
+let message_arg =
+  let doc = "Optional message describing the expense" in
+  Arg.(value & opt (some string) None & info ["m"; "message"] ~docv:"MESSAGE" ~doc)
+
+let list_flag =
+  let doc = "List today's expenses" in
+  Arg.(value & flag & info ["l"; "list"] ~doc)
+
+(* Main command *)
+let cmd =
+  let doc = "A simple CLI utility for tracking daily expenses" in
+  let man = [
+    `S Manpage.s_description;
+    `P "Spendo is a command-line tool for tracking daily expenses.";
+    `S Manpage.s_examples;
+    `P "spendo 25.4";
+    `P "spendo 25.4 -m \"food\"";
+    `P "spendo -l";
+  ] in
+  let term = Term.(const (fun amount message list ->
+    match (amount, list) with
+    | (None, true) -> list_expenses ()
+    | (Some amt, false) -> add_expense amt message
+    | (Some _, true) -> list_expenses ()
+    | (None, false) -> print_endline "Error: Amount is required"; print_endline "Try 'spendo --help' for more information"
+    ) 
+    $ amount_arg $ message_arg $ list_flag) in
+  Cmd.v (Cmd.info "spendo" ~version:"1.0.0" ~doc ~man) term
 
 (* Main function *)
-let () =
-  let args = Array.to_list Sys.argv in
-  match args with
-  | [_; "-l"] | [_; "--list"] ->
-      list_expenses_cli ()
-  | [_; amount] ->
-      add_expense_cli amount None
-  | [_; amount; "-m"; message] | [_; amount; "--message"; message] ->
-      add_expense_cli amount (Some message)
-  | [_] ->
-      print_usage ()
-  | _ ->
-      print_endline "Error: Invalid arguments";
-      print_usage () 
+let () = Stdlib.exit @@ Cmd.eval cmd 

@@ -68,15 +68,16 @@ The current implementation is organized into modules with clear responsibilities
 - **`lib/types.ml`**: Core data structures (`expense`, `daily_expenses`)
 - **`lib/expense.ml`**: Expense creation, formatting, and calculation functions
 - **`lib/storage.ml`**: JSON persistence and data management
-- **`bin/main.ml`**: CLI interface and argument parsing
+- **`bin/spendo.ml`**: CLI interface using `cmdliner` for robust argument parsing
 
 Features:
-- Simple command-line argument parsing
-- JSON-based storage using the `yojson` library
+- **Robust command-line parsing** using the `cmdliner` library
+- **Automatic help generation** with `--help` and `-h` flags
+- **JSON-based storage** using the `yojson` library
 - **Integer-based amounts** (stored in cents) to avoid floating-point precision errors
-- Daily expense tracking with optional messages
-- Total calculation for each day
-- Interoperable data format that can be easily parsed by other tools
+- **Daily expense tracking** with optional messages
+- **Total calculation** for each day
+- **Interoperable data format** that can be easily parsed by other tools
 
 ## Amount Storage
 
