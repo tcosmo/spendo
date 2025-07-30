@@ -1,11 +1,14 @@
 # Spendo - Daily Expense Tracker
 
-A simple OCaml CLI utility for tracking daily expenses.
+A simple OCaml CLI utility for tracking daily expenses with budget tracking and savings management.
 
 ## Features
 
 - Add expenses with optional messages
-- List today's expenses with total
+- Mark expenses as savings (excluded from budget calculations)
+- List today's expenses with total and budget information
+- Multi-day expense listing with budget evolution
+- Monthly budget tracking with customizable start day
 - Simple text-based storage
 
 ## Usage
@@ -20,11 +23,23 @@ spendo 25.4 -m "food"
 # Add an expense for a previous day
 spendo 25.4 -m "yesterday's lunch" -d 1
 
+# Add an expense marked as savings (excluded from budget)
+spendo 25.4 -m "vacation" -s
+
 # List today's expenses
 spendo -l
 
 # List expenses for the last 4 days
 spendo -n 4
+
+# Set monthly budget
+spendo -b 800.00
+
+# Set budget start day (e.g., day 25 of each month)
+spendo -t 25
+
+# Show current settings
+spendo -c
 ```
 
 ## Building
@@ -55,16 +70,33 @@ Expenses are stored in `spendo_data.json` in the current directory using a stand
       {
         "amount": 525,
         "message": "coffee",
-        "timestamp": "now"
+        "timestamp": "now",
+        "savings": false
       },
       {
         "amount": 1250,
         "message": "lunch",
-        "timestamp": "now"
+        "timestamp": "now",
+        "savings": false
+      },
+      {
+        "amount": 5000,
+        "message": "vacation",
+        "timestamp": "now",
+        "savings": true
       }
     ]
   }
 ]
+```
+
+Budget settings are stored in `settings.json`:
+
+```json
+{
+  "monthly_budget": 80000,
+  "budget_start_day": 25
+}
 ```
 
 ## Current Implementation
@@ -82,7 +114,10 @@ Features:
 - **JSON-based storage** using the `yojson` library
 - **Integer-based amounts** (stored in cents) to avoid floating-point precision errors
 - **Daily expense tracking** with optional messages
-- **Total calculation** for each day
+- **Savings tracking** with expenses marked as savings excluded from budget calculations
+- **Budget tracking** with monthly budgets and customizable start days
+- **Budget evolution display** showing remaining budget per day for multi-day listings
+- **Total calculation** for each day with separate totals excluding savings
 - **Interoperable data format** that can be easily parsed by other tools
 
 ## Amount Storage
@@ -128,4 +163,16 @@ Date: 2024-01-15
 Expenses:
 25.00 - lunch
 Total: 25.00
+
+$ spendo 50.00 -m "vacation" -s
+Added expense: 50.00 (vacation) [SAVINGS]
+
+$ spendo -l
+Date: 2024-01-15
+Expenses:
+25.00 - lunch
+50.00 - vacation [SAVINGS]
+Total: 75.00
+Total (excl. savings): 25.00
+Remaining day's budget: 15.50 (5 days left)
 ``` 

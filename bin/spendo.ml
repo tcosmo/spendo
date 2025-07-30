@@ -7,7 +7,8 @@ let add_expense amount message date_offset savings =
     let amount_cents = int_of_float (amount_float *. 100.0) in
     Spendo_lib.Storage.add_expense amount_cents message (-1*date_offset) savings;
     let target_date = Spendo_lib.Storage.get_date_offset date_offset in
-    Printf.printf "Today's date: %s\nAdded expense: %.2f" target_date amount_float;
+    let date_label = if date_offset = 0 then "Today's date" else "Date" in
+    Printf.printf "%s: %s\nAdded expense: %.2f" date_label target_date amount_float;
     (match message with
      | Some msg -> Printf.printf " (%s)" msg
      | None -> ());
@@ -144,7 +145,7 @@ let date_offset_arg =
 
 let savings_flag =
   let doc = "Mark the expense as a savings" in
-  Arg.(value & flag & info ["a"; "savings"] ~doc)
+  Arg.(value & flag & info ["s"; "savings"] ~doc)
 
 let list_flag =
   let doc = "List today's expenses" in
@@ -160,7 +161,7 @@ let budget_arg =
 
 let budget_start_day_arg =
   let doc = "Set the day of the month to start the budget (1-31)" in
-  Arg.(value & opt (some string) None & info ["s"; "start-day"] ~docv:"DAY" ~doc)
+  Arg.(value & opt (some string) None & info ["t"; "start-day"] ~docv:"DAY" ~doc)
 
 let settings_flag =
   let doc = "Show current settings" in
@@ -175,10 +176,12 @@ let cmd =
     `S Manpage.s_examples;
     `P "spendo 25.4";
     `P "spendo 25.4 -m \"food\"";
+    `P "spendo 25.4 -s (mark as savings)";
     `P "spendo -l";
-    `P "spendo -b 800.00";
-    `P "spendo -s 25";
-    `P "spendo -c";
+    `P "spendo -n 7 (show last 7 days)";
+    `P "spendo -b 800.00 (set monthly budget)";
+    `P "spendo -t 25 (set budget start day)";
+    `P "spendo -c (show settings)";
   ] in
   let term = Term.(const (fun amount message date_offset savings list days budget budget_start_day settings ->
     if budget <> None then
