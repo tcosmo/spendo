@@ -19,6 +19,5 @@
    (>= 3.0))
   (unix :build)
   (yojson :build)
-  (cmdliner :build)
   (alcotest :dev))
  (allow_empty))

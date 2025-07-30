@@ -9,4 +9,9 @@ type expense = {
 type daily_expenses = {
   date: string;
   expenses: expense list;
+}
+
+type settings = {
+  monthly_budget: int option; (* Monthly budget in cents *)
+  budget_start_day: int option; (* Day of month when budget period starts (1-31) *)
 } 

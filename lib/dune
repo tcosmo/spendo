@@ -1,3 +1,3 @@
 (library
  (name spendo_lib)
- (libraries unix yojson cmdliner))
+ (libraries unix yojson))
