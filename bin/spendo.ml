@@ -1,14 +1,15 @@
 open Cmdliner
 
 (* CLI functions *)
-let add_expense amount message date_offset savings =
+let add_expense amount message date_offset savings income =
   try
     let amount_float = float_of_string amount in
-    let amount_cents = int_of_float (amount_float *. 100.0) in
+    let amount_cents = if income then int_of_float (-.amount_float *. 100.0) else int_of_float (amount_float *. 100.0) in
     Spendo_lib.Storage.add_expense amount_cents message (-1*date_offset) savings;
     let target_date = Spendo_lib.Storage.get_date_offset date_offset in
     let date_label = if date_offset = 0 then "Today's date" else "Date" in
-    Printf.printf "%s: %s\nAdded expense: %.2f" date_label target_date amount_float;
+    let transaction_type = if income then "income" else "expense" in
+    Printf.printf "%s: %s\nAdded %s: %.2f" date_label target_date transaction_type (abs_float amount_float);
     (match message with
      | Some msg -> Printf.printf " (%s)" msg
      | None -> ());
@@ -132,7 +133,7 @@ let show_settings () =
 
 (* Command line arguments *)
 let amount_arg =
-  let doc = "Amount to add as expense" in
+  let doc = "Amount to add as expense (use -i flag for income)" in
   Arg.(value & pos 0 (some string) None & info [] ~docv:"AMOUNT" ~doc)
 
 let message_arg =
@@ -146,6 +147,10 @@ let date_offset_arg =
 let savings_flag =
   let doc = "Mark the expense as a savings" in
   Arg.(value & flag & info ["s"; "savings"] ~doc)
+
+let income_flag =
+  let doc = "Mark the amount as income (positive amount)" in
+  Arg.(value & flag & info ["i"; "income"] ~doc)
 
 let list_flag =
   let doc = "List today's expenses" in
@@ -177,13 +182,14 @@ let cmd =
     `P "spendo 25.4";
     `P "spendo 25.4 -m \"food\"";
     `P "spendo 25.4 -s (mark as savings)";
+    `P "spendo 100.00 -i -m \"salary\" (income)";
     `P "spendo -l";
     `P "spendo -n 7 (show last 7 days)";
     `P "spendo -b 800.00 (set monthly budget)";
     `P "spendo -t 25 (set budget start day)";
     `P "spendo -c (show settings)";
   ] in
-  let term = Term.(const (fun amount message date_offset savings list days budget budget_start_day settings ->
+  let term = Term.(const (fun amount message date_offset savings income list days budget budget_start_day settings ->
     if budget <> None then
       set_monthly_budget (Option.get budget)
     else if budget_start_day <> None then
@@ -193,11 +199,12 @@ let cmd =
     else if list || (amount = None && days > 1) then
       list_expenses days
     else if amount <> None then
-      add_expense (Option.get amount) message (-1*date_offset) savings
+      let amount_str = Option.get amount in
+      add_expense amount_str message (-1*date_offset) savings income
     else
       list_expenses days
     ) 
-    $ amount_arg $ message_arg $ date_offset_arg $ savings_flag $ list_flag $ days_arg $ budget_arg $ budget_start_day_arg $ settings_flag) in
+    $ amount_arg $ message_arg $ date_offset_arg $ savings_flag $ income_flag $ list_flag $ days_arg $ budget_arg $ budget_start_day_arg $ settings_flag) in
   Cmd.v (Cmd.info "spendo" ~version:"1.0.0" ~doc ~man) term
 
 (* Main function *)

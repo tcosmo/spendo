@@ -41,7 +41,11 @@ let total_expenses expenses =
   List.fold_left (fun acc exp -> acc + exp.Types.amount) 0 expenses
 
 let format_expense expense =
-  let amount_str = Printf.sprintf "%.2f" (float_of_int expense.Types.amount /. 100.0) in
+  let amount_float = float_of_int expense.Types.amount /. 100.0 in
+  let amount_str = if amount_float < 0.0 then
+    Printf.sprintf "(%.2f)" (abs_float amount_float)
+  else
+    Printf.sprintf "%.2f" amount_float in
   let message_str = match expense.Types.message with
     | Some msg -> " - " ^ msg
     | None -> ""

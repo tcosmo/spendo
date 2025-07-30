@@ -26,6 +26,9 @@ spendo 25.4 -m "yesterday's lunch" -d 1
 # Add an expense marked as savings (excluded from budget)
 spendo 25.4 -m "vacation" -s
 
+# Add income (positive amount with -i flag)
+spendo 100.00 -i -m "salary"
+
 # List today's expenses
 spendo -l
 
@@ -167,12 +170,16 @@ Total: 25.00
 $ spendo 50.00 -m "vacation" -s
 Added expense: 50.00 (vacation) [SAVINGS]
 
+$ spendo 100.00 -i -m "salary"
+Added income: 100.00 (salary)
+
 $ spendo -l
 Date: 2024-01-15
 Expenses:
 25.00 - lunch
 50.00 - vacation [SAVINGS]
-Total: 75.00
-Total (excl. savings): 25.00
+(100.00) - salary
+Total: -25.00
+Total (excl. savings): -25.00
 Remaining day's budget: 15.50 (5 days left)
 ``` 
