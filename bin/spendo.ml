@@ -29,7 +29,7 @@ let list_expenses days =
         let (remaining_budget, remaining_days) = Spendo_lib.Storage.get_remaining_budget_per_day () in
         if remaining_days > 0 then
           let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
-          Printf.printf "Remaining Day's budget: %.2f (%d days left)\n" budget_per_day remaining_days
+          Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days
         else if remaining_budget <> 0 then
           let budget_float = float_of_int remaining_budget /. 100.0 in
           Printf.printf "Budget period ended. Remaining: %.2f\n" budget_float
@@ -39,7 +39,7 @@ let list_expenses days =
         let (remaining_budget, remaining_days) = Spendo_lib.Storage.get_remaining_budget_per_day () in
         if remaining_days > 0 then
           let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
-          Printf.printf "Remaining Day's budget: %.2f (%d days left)\n" budget_per_day remaining_days
+          Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days
   )
   else
     try
@@ -51,7 +51,7 @@ let list_expenses days =
           let (remaining_budget, remaining_days) = Spendo_lib.Storage.get_remaining_budget_per_day () in
           if remaining_days > 0 then
             let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
-            Printf.printf "Remaining Day's budget: %.2f (%d days left)\n" budget_per_day remaining_days
+            Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days
         | daily_list ->
             List.iter (fun daily ->
               if List.length daily.Spendo_lib.Types.expenses = 0 then
