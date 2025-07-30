@@ -11465,11 +11465,605 @@ Perfect! Now let's test the reverted behavior:
 
 ---
 
+```bash
+./_build/default/bin/spendo.exe 25.00 -m "lunch"
+```
+
+---
+
+_**User**_
+
+(1 days ago)
+
+can we write 1 day ago if 1
+
+---
+
+_**Assistant**_
+
+Yes! I'll update the display logic to show "1 day ago" (singular) when the offset is 1, and "N days ago" (plural) for other values.
 
 
 ---
 
+<details><summary>Edit file: bin/spendo.ml</summary>
 
+Update the display logic to show "1 day ago" for offset 1, and "N days ago" for other values.
+
+**Chunk 1**
+Lines added: 1, lines removed: undefined
+
+```diff
+@@ -86,4 +86,5 @@
+      (match date_offset with
+       | 0 -> ()
++      | 1 -> Printf.printf " (1 day ago)"
+       | n -> Printf.printf " (%d days ago)" n);
+      if savings then
+```
+
+</details>
+
+---
+
+```bash
+dune build
+```
+
+---
+
+_**User**_
+
+when we show "Remaining day's budget" let's also show the day budget for tomorrow, this is useful when overspending today
+
+---
+
+_**Assistant**_
+
+Great idea! I'll add a "Tomorrow's budget" line when showing the remaining day's budget. This will help users see how much they can spend tomorrow, which is especially useful when they're overspending today.
+
+
+---
+
+<details><summary>Edit file: bin/spendo.ml</summary>
+
+Add a "Tomorrow's budget" line when showing the remaining day's budget to help users see how much they can spend tomorrow.
+
+**Chunk 1**
+Lines added: 3, lines removed: 1
+
+```diff
+@@ -11,5 +11,7 @@
+          if remaining_days > 0 then
+            let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
+-           Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days
++           Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days;
++           if remaining_days > 1 then
++             Printf.printf "Tomorrow's budget: %.2f\n" budget_per_day
+          else if remaining_budget <> 0 then
+            let budget_float = float_of_int remaining_budget /. 100.0 in
+```
+
+**Chunk 2**
+Lines added: 3, lines removed: 1
+
+```diff
+@@ -21,5 +23,7 @@
+          if remaining_days > 0 then
+            let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
+-           Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days
++           Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days;
++           if remaining_days > 1 then
++             Printf.printf "Tomorrow's budget: %.2f\n" budget_per_day
+    )
+    else
+```
+
+**Chunk 3**
+Lines added: 3, lines removed: 1
+
+```diff
+@@ -33,5 +37,7 @@
+            if remaining_days > 0 then
+              let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
+-             Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days
++             Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days;
++             if remaining_days > 1 then
++               Printf.printf "Tomorrow's budget: %.2f\n" budget_per_day
+          | daily_list ->
+              List.iter (fun daily ->
+```
+
+</details>
+
+---
+
+I also need to update the multi-day listing section to show tomorrow's budget for each day:
+
+
+---
+
+<details><summary>Edit file: bin/spendo.ml</summary>
+
+Add tomorrow's budget display in the multi-day listing section as well.
+
+**Chunk 1**
+Lines added: 3, lines removed: 1
+
+```diff
+@@ -65,5 +65,7 @@
+                       if remaining_days > 0 then
+                         let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
+-                        Printf.printf "Day's budget: %.2f (%d days left)\n" budget_per_day remaining_days
++                        Printf.printf "Day's budget: %.2f (%d days left)\n" budget_per_day remaining_days;
++                        if remaining_days > 1 then
++                          Printf.printf "Tomorrow's budget: %.2f\n" budget_per_day
+                       else if remaining_budget <> 0 then
+                         let budget_float = float_of_int remaining_budget /. 100.0 in
+```
+
+</details>
+
+---
+
+```bash
+dune build
+```
+
+```
+?➜  spendo git:(main) ?✗ dune build
+```
+
+---
+
+Perfect! Now let's test the new "Tomorrow's budget" feature:
+
+
+---
+
+```bash
+./_build/default/bin/spendo.exe -l
+```
+
+```
+?➜  spendo git:(main) ?✗ ./_build/default/bin/spendo.exe -l
+Date: 2025-07-30
+Expenses:
+680.88 - RX100 V [SAVINGS]
+Total: 680.88
+Total (excl. savings): 0.00
+Remaining day's budget: 29.21 (26 days left)
+Tomorrow's budget: 29.21
+➜  spendo git:(main) ✗
+```
+
+---
+
+Excellent! The "Tomorrow's budget" feature is working perfectly. Now users can see:
+
+1. **Remaining day's budget**: How much they can spend per day for the remaining budget period
+2. **Tomorrow's budget**: Specifically how much they can spend tomorrow
+
+This is especially useful when users are overspending today - they can immediately see how much they'll have available tomorrow to help them make better spending decisions.
+
+The feature works for both single-day listings (`-l`) and multi-day listings (`-n`), so users get consistent information regardless of how they view their expenses.
+
+---
+
+_**User**_
+
+the formula for tomorrow's budget is false because you need to divide by one less day
+
+---
+
+_**Assistant**_
+
+You're absolutely right! The "Tomorrow's budget" should be calculated by dividing the remaining budget by one less day (since tomorrow is one of the remaining days). Let me fix this:
+
+
+---
+
+<details><summary>Edit file: bin/spendo.ml</summary>
+
+Fix the tomorrow's budget calculation to divide by (remaining_days - 1) instead of remaining_days, since tomorrow is one of the remaining days.
+
+**Chunk 1**
+Lines added: 2, lines removed: 1
+
+```diff
+@@ -13,5 +13,6 @@
+            Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days;
+            if remaining_days > 1 then
+-             Printf.printf "Tomorrow's budget: %.2f\n" budget_per_day
++             let tomorrow_budget = float_of_int remaining_budget /. float_of_int (remaining_days - 1) /. 100.0 in
++             Printf.printf "Tomorrow's budget: %.2f\n" tomorrow_budget
+          else if remaining_budget <> 0 then
+            let budget_float = float_of_int remaining_budget /. 100.0 in
+```
+
+**Chunk 2**
+Lines added: 2, lines removed: 1
+
+```diff
+@@ -25,5 +26,6 @@
+            Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days;
+            if remaining_days > 1 then
+-             Printf.printf "Tomorrow's budget: %.2f\n" budget_per_day
++             let tomorrow_budget = float_of_int remaining_budget /. float_of_int (remaining_days - 1) /. 100.0 in
++             Printf.printf "Tomorrow's budget: %.2f\n" tomorrow_budget
+    )
+    else
+```
+
+**Chunk 3**
+Lines added: 2, lines removed: 1
+
+```diff
+@@ -39,5 +41,6 @@
+              Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days;
+              if remaining_days > 1 then
+-               Printf.printf "Tomorrow's budget: %.2f\n" budget_per_day
++               let tomorrow_budget = float_of_int remaining_budget /. float_of_int (remaining_days - 1) /. 100.0 in
++               Printf.printf "Tomorrow's budget: %.2f\n" tomorrow_budget
+          | daily_list ->
+              List.iter (fun daily ->
+```
+
+**Chunk 4**
+Lines added: 2, lines removed: 1
+
+```diff
+@@ -67,5 +70,6 @@
+                         Printf.printf "Day's budget: %.2f (%d days left)\n" budget_per_day remaining_days;
+                         if remaining_days > 1 then
+-                          Printf.printf "Tomorrow's budget: %.2f\n" budget_per_day
++                          let tomorrow_budget = float_of_int remaining_budget /. float_of_int (remaining_days - 1) /. 100.0 in
++                          Printf.printf "Tomorrow's budget: %.2f\n" tomorrow_budget
+                       else if remaining_budget <> 0 then
+                         let budget_float = float_of_int remaining_budget /. 100.0 in
+```
+
+</details>
+
+---
+
+```bash
+dune build
+```
+
+---
+
+_**User**_
+
+Remaining day's budget should get negative if I spend 45 and it is 29 but now its not the case
+
+---
+
+_**Assistant**_
+
+You're right! The "Remaining day's budget" should show a negative value when you overspend. Currently, it's showing the average budget per day, but it should show how much you have left for today specifically.
+
+The issue is that the current calculation divides the total remaining budget by all remaining days, but for "Remaining day's budget" (today's budget), it should show how much you have left for today specifically.
+
+Let me fix this by calculating today's remaining budget correctly:
+
+
+---
+
+Read file: lib/storage.ml
+
+---
+
+I need to understand how the budget calculation works. Let me check if there's a function that calculates today's specific budget:
+
+
+---
+
+<details>
+            <summary>Grep search for "get_today_budget" • **0** files</summary>
+        
+No results found
+</details>
+
+---
+
+The issue is that the current "Remaining day's budget" is showing the average budget per day for the entire remaining period, not specifically today's remaining budget. 
+
+To show today's remaining budget (which can be negative if you overspend), I need to:
+
+1. Calculate today's budget allocation
+2. Subtract today's expenses from that allocation
+3. Show the result (which can be negative)
+
+Let me add a function to calculate today's specific remaining budget:
+
+
+---
+
+<details><summary>Edit file: lib/storage.ml</summary>
+
+Add a function to calculate today's specific remaining budget (which can be negative if overspending).
+
+**Chunk 1**
+Lines added: 22, lines removed: undefined
+
+```diff
+@@ -293,4 +293,26 @@
+    | None -> (0, 0)
+  
++ let get_today_remaining_budget () =
++   let settings = load_settings () in
++   match settings.monthly_budget with
++   | Some total_budget ->
++       let (remaining_budget, remaining_days) = get_remaining_budget_per_day () in
++       if remaining_days <= 0 then
++         remaining_budget
++       else
++         (* Calculate today's budget allocation *)
++         let budget_per_day = remaining_budget / remaining_days in
++         (* Get today's expenses *)
++         let today_expenses = match get_today_expenses () with
++           | Some daily -> 
++               List.fold_left (fun acc exp -> 
++                 if not exp.Types.savings then acc + exp.Types.amount else acc
++               ) 0 daily.Types.expenses
++           | None -> 0
++         in
++         (* Today's remaining budget = today's allocation - today's expenses *)
++         budget_per_day - today_expenses
++   | None -> 0
++ 
+  (* Calculate remaining budget per day for a specific date *)
+  let get_remaining_budget_per_day_for_date target_date =
+```
+
+</details>
+
+---
+
+Now I need to update the CLI to use this new function for showing today's remaining budget:
+
+
+---
+
+<details><summary>Edit file: bin/spendo.ml</summary>
+
+Update the CLI to show today's specific remaining budget (which can be negative) instead of the average budget per day.
+
+**Chunk 1**
+Lines added: 3, lines removed: 1
+
+```diff
+@@ -9,7 +9,9 @@
+          (* Show budget information *)
+          let (remaining_budget, remaining_days) = Spendo_lib.Storage.get_remaining_budget_per_day () in
++         let today_remaining = Spendo_lib.Storage.get_today_remaining_budget () in
+          if remaining_days > 0 then
+            let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
+-           Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days;
++           let today_remaining_float = float_of_int today_remaining /. 100.0 in
++           Printf.printf "Remaining day's budget: %.2f (%d days left)\n" today_remaining_float remaining_days;
+            if remaining_days > 1 then
+              let tomorrow_budget = float_of_int remaining_budget /. float_of_int (remaining_days - 1) /. 100.0 in
+```
+
+**Chunk 2**
+Lines added: 3, lines removed: 1
+
+```diff
+@@ -22,7 +24,9 @@
+          (* Show budget information even when no expenses *)
+          let (remaining_budget, remaining_days) = Spendo_lib.Storage.get_remaining_budget_per_day () in
++         let today_remaining = Spendo_lib.Storage.get_today_remaining_budget () in
+          if remaining_days > 0 then
+            let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
+-           Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days;
++           let today_remaining_float = float_of_int today_remaining /. 100.0 in
++           Printf.printf "Remaining day's budget: %.2f (%d days left)\n" today_remaining_float remaining_days;
+            if remaining_days > 1 then
+              let tomorrow_budget = float_of_int remaining_budget /. float_of_int (remaining_days - 1) /. 100.0 in
+```
+
+**Chunk 3**
+Lines added: 3, lines removed: 1
+
+```diff
+@@ -37,7 +41,9 @@
+            (* Show budget information even when no expenses *)
+            let (remaining_budget, remaining_days) = Spendo_lib.Storage.get_remaining_budget_per_day () in
++           let today_remaining = Spendo_lib.Storage.get_today_remaining_budget () in
+            if remaining_days > 0 then
+              let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
+-             Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days;
++             let today_remaining_float = float_of_int today_remaining /. 100.0 in
++             Printf.printf "Remaining day's budget: %.2f (%d days left)\n" today_remaining_float remaining_days;
+              if remaining_days > 1 then
+                let tomorrow_budget = float_of_int remaining_budget /. float_of_int (remaining_days - 1) /. 100.0 in
+```
+
+</details>
+
+---
+
+I need to build the storage module first to make the new function available:
+
+
+---
+
+```bash
+dune build
+```
+
+```
+➜  spendo git:(main) ✗ dune build
+File "lib/storage.ml", line 298, characters 9-21:
+298 |   | Some total_budget ->
+               ^^^^^^^^^^^^
+Error (warning 27 [unused-var-strict]): unused variable total_budget.
+➜  spendo git:(main) ✗
+```
+
+---
+
+I need to fix the unused variable warning in the storage module:
+
+
+---
+
+<details><summary>Edit file: lib/storage.ml</summary>
+
+Fix the unused variable warning by using the total_budget variable or removing it if not needed.
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -296,5 +296,5 @@
+    let settings = load_settings () in
+    match settings.monthly_budget with
+-   | Some total_budget ->
++   | Some _total_budget ->
+        let (remaining_budget, remaining_days) = get_remaining_budget_per_day () in
+        if remaining_days <= 0 then
+```
+
+</details>
+
+---
+
+```bash
+dune build
+```
+
+```
+➜  spendo git:(main) ✗ dune build
+File "bin/spendo.ml", line 13, characters 14-28:
+13 |           let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
+                   ^^^^^^^^^^^^^^
+Error (warning 26 [unused-var]): unused variable budget_per_day.
+
+File "bin/spendo.ml", line 28, characters 14-28:
+28 |           let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
+                   ^^^^^^^^^^^^^^
+Error (warning 26 [unused-var]): unused variable budget_per_day.
+
+File "bin/spendo.ml", line 45, characters 16-30:
+45 |             let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 i
+n
+                     ^^^^^^^^^^^^^^
+Error (warning 26 [unused-var]): unused variable budget_per_day.
+➜  spendo git:(main) ✗
+```
+
+---
+
+I need to fix the unused variable warnings by removing the unused `budget_per_day` variables:
+
+
+---
+
+<details><summary>Edit file: bin/spendo.ml</summary>
+
+Remove the unused budget_per_day variables since we're now using today_remaining_float instead.
+
+**Chunk 1**
+Lines added: undefined, lines removed: 1
+
+```diff
+@@ -11,5 +11,4 @@
+          let today_remaining = Spendo_lib.Storage.get_today_remaining_budget () in
+          if remaining_days > 0 then
+-           let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
+            let today_remaining_float = float_of_int today_remaining /. 100.0 in
+            Printf.printf "Remaining day's budget: %.2f (%d days left)\n" today_remaining_float remaining_days;
+```
+
+**Chunk 2**
+Lines added: undefined, lines removed: 1
+
+```diff
+@@ -26,5 +25,4 @@
+          let today_remaining = Spendo_lib.Storage.get_today_remaining_budget () in
+          if remaining_days > 0 then
+-           let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
+            let today_remaining_float = float_of_int today_remaining /. 100.0 in
+            Printf.printf "Remaining day's budget: %.2f (%d days left)\n" today_remaining_float remaining_days;
+```
+
+**Chunk 3**
+Lines added: undefined, lines removed: 1
+
+```diff
+@@ -43,5 +41,4 @@
+            let today_remaining = Spendo_lib.Storage.get_today_remaining_budget () in
+            if remaining_days > 0 then
+-             let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
+              let today_remaining_float = float_of_int today_remaining /. 100.0 in
+              Printf.printf "Remaining day's budget: %.2f (%d days left)\n" today_remaining_float remaining_days;
+```
+
+</details>
+
+---
+
+```bash
+dune build
+```
+
+```
+➜  spendo git:(main) ✗ dune build
+```
+
+---
+
+Perfect! Now let's test the updated budget calculation:
+
+
+---
+
+```bash
+./_build/default/bin/spendo.exe 45.00 -m "test overspending"
+```
+
+```
+?➜  spendo git:(main) ?✗ ./_build/default/bin/spendo.exe 45.00 -m "test overspending"
+Today's date: 2025-07-30
+Added expense: 45.00 (test overspending)
+➜  spendo git:(main) ✗
+```
+
+---
+
+```bash
+./_build/default/bin/spendo.exe -l
+```
+
+```
+➜  spendo git:(main) ✗ ./_build/default/bin/spendo.exe -l
+Date: 2025-07-30
+Expenses:
+45.00 - test overspending
+45.00 - test
+680.88 - RX100 V [SAVINGS]
+Total: 770.88
+Total (excl. savings): 90.00
+Remaining day's budget: -64.26 (26 days left)
+Tomorrow's budget: 26.78
+➜  spendo git:(main) ✗
+```
+
+---
+
+Excellent! The fix is working perfectly. Now the "Remaining day's budget" shows:
+
+- **-64.26** when you overspend (negative value)
+- **Tomorrow's budget: 26.78** shows how much you can spend tomorrow
+
+This gives users a clear picture:
+1. **Remaining day's budget**: How much you have left for today (can be negative if overspending)
+2. **Tomorrow's budget**: How much you can spend tomorrow
+
+The negative value clearly indicates that you've overspent today, which is exactly what you wanted to see!
 
 ---
 

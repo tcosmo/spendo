@@ -292,6 +292,28 @@ let get_remaining_budget_per_day () =
         (remaining_budget, remaining_days)
   | None -> (0, 0)
 
+let get_today_remaining_budget () =
+  let settings = load_settings () in
+  match settings.monthly_budget with
+  | Some _total_budget ->
+      let (remaining_budget, remaining_days) = get_remaining_budget_per_day () in
+      if remaining_days <= 0 then
+        remaining_budget
+      else
+        (* Calculate today's budget allocation *)
+        let budget_per_day = remaining_budget / remaining_days in
+        (* Get today's expenses *)
+        let today_expenses = match get_today_expenses () with
+          | Some daily -> 
+              List.fold_left (fun acc exp -> 
+                if not exp.Types.savings then acc + exp.Types.amount else acc
+              ) 0 daily.Types.expenses
+          | None -> 0
+        in
+        (* Today's remaining budget = today's allocation - today's expenses *)
+        budget_per_day - today_expenses
+  | None -> 0
+
 (* Calculate remaining budget per day for a specific date *)
 let get_remaining_budget_per_day_for_date target_date =
   let settings = load_settings () in

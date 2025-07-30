@@ -8,9 +8,13 @@ let list_expenses days =
         print_endline (Spendo_lib.Expense.format_daily_expenses daily);
         (* Show budget information *)
         let (remaining_budget, remaining_days) = Spendo_lib.Storage.get_remaining_budget_per_day () in
+        let today_remaining = Spendo_lib.Storage.get_today_remaining_budget () in
         if remaining_days > 0 then
-          let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
-          Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days
+          let today_remaining_float = float_of_int today_remaining /. 100.0 in
+          Printf.printf "Remaining day's budget: %.2f (%d days left)\n" today_remaining_float remaining_days;
+          if remaining_days > 1 then
+            let tomorrow_budget = float_of_int remaining_budget /. float_of_int (remaining_days - 1) /. 100.0 in
+            Printf.printf "Tomorrow's budget: %.2f\n" tomorrow_budget
         else if remaining_budget <> 0 then
           let budget_float = float_of_int remaining_budget /. 100.0 in
           Printf.printf "Budget period ended. Remaining: %.2f\n" budget_float
@@ -18,9 +22,13 @@ let list_expenses days =
         print_endline "No expenses recorded for today";
         (* Show budget information even when no expenses *)
         let (remaining_budget, remaining_days) = Spendo_lib.Storage.get_remaining_budget_per_day () in
+        let today_remaining = Spendo_lib.Storage.get_today_remaining_budget () in
         if remaining_days > 0 then
-          let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
-          Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days
+          let today_remaining_float = float_of_int today_remaining /. 100.0 in
+          Printf.printf "Remaining day's budget: %.2f (%d days left)\n" today_remaining_float remaining_days;
+          if remaining_days > 1 then
+            let tomorrow_budget = float_of_int remaining_budget /. float_of_int (remaining_days - 1) /. 100.0 in
+            Printf.printf "Tomorrow's budget: %.2f\n" tomorrow_budget
   )
   else
     try
@@ -30,9 +38,13 @@ let list_expenses days =
           print_endline "No expenses for the last days";
           (* Show budget information even when no expenses *)
           let (remaining_budget, remaining_days) = Spendo_lib.Storage.get_remaining_budget_per_day () in
+          let today_remaining = Spendo_lib.Storage.get_today_remaining_budget () in
           if remaining_days > 0 then
-            let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
-            Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days
+            let today_remaining_float = float_of_int today_remaining /. 100.0 in
+            Printf.printf "Remaining day's budget: %.2f (%d days left)\n" today_remaining_float remaining_days;
+            if remaining_days > 1 then
+              let tomorrow_budget = float_of_int remaining_budget /. float_of_int (remaining_days - 1) /. 100.0 in
+              Printf.printf "Tomorrow's budget: %.2f\n" tomorrow_budget
         | daily_list ->
             List.iter (fun daily ->
               if List.length daily.Spendo_lib.Types.expenses = 0 then
@@ -58,7 +70,10 @@ let list_expenses days =
                      let (remaining_budget, remaining_days) = Spendo_lib.Storage.get_remaining_budget_per_day_for_date date_time in
                      if remaining_days > 0 then
                        let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
-                       Printf.printf "Day's budget: %.2f (%d days left)\n" budget_per_day remaining_days
+                       Printf.printf "Day's budget: %.2f (%d days left)\n" budget_per_day remaining_days;
+                       if remaining_days > 1 then
+                         let tomorrow_budget = float_of_int remaining_budget /. float_of_int (remaining_days - 1) /. 100.0 in
+                         Printf.printf "Tomorrow's budget: %.2f\n" tomorrow_budget
                      else if remaining_budget <> 0 then
                        let budget_float = float_of_int remaining_budget /. 100.0 in
                        Printf.printf "Budget period ended. Remaining: %.2f\n" budget_float
