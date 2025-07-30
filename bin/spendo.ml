@@ -85,89 +85,14 @@ let add_expense amount message date_offset savings income =
      | None -> ());
     (match date_offset with
      | 0 -> ()
+     | 1 -> Printf.printf " (1 day ago)"
      | n -> Printf.printf " (%d days ago)" n);
     if savings then
       Printf.printf " [SAVINGS]";
-    print_endline "";
-    
-    (* Show today's state if the transaction is for today *)
-    if date_offset = 0 then (
-      print_endline "";
-      list_expenses 1
-    )
+    print_endline ""
   with
   | Failure _ -> 
       print_endline "Error: Invalid amount"
-
-let list_expenses days =
-  if days = 1 then (
-    match Spendo_lib.Storage.get_today_expenses () with
-    | Some daily ->
-        print_endline (Spendo_lib.Expense.format_daily_expenses daily);
-        (* Show budget information *)
-        let (remaining_budget, remaining_days) = Spendo_lib.Storage.get_remaining_budget_per_day () in
-        if remaining_days > 0 then
-          let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
-          Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days
-        else if remaining_budget <> 0 then
-          let budget_float = float_of_int remaining_budget /. 100.0 in
-          Printf.printf "Budget period ended. Remaining: %.2f\n" budget_float
-    | None ->
-        print_endline "No expenses recorded for today";
-        (* Show budget information even when no expenses *)
-        let (remaining_budget, remaining_days) = Spendo_lib.Storage.get_remaining_budget_per_day () in
-        if remaining_days > 0 then
-          let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
-          Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days
-  )
-  else
-    try
-      let expenses = Spendo_lib.Storage.get_expenses_for_last_n_days days in
-      match expenses with
-      | [] ->
-          print_endline "No expenses for the last days";
-          (* Show budget information even when no expenses *)
-          let (remaining_budget, remaining_days) = Spendo_lib.Storage.get_remaining_budget_per_day () in
-          if remaining_days > 0 then
-            let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
-            Printf.printf "Remaining day's budget: %.2f (%d days left)\n" budget_per_day remaining_days
-        | daily_list ->
-            List.iter (fun daily ->
-              if List.length daily.Spendo_lib.Types.expenses = 0 then
-                Printf.printf "Date: %s\nNo expenses recorded for this day\n" daily.Spendo_lib.Types.date
-              else
-                print_endline (Spendo_lib.Expense.format_daily_expenses daily);
-              
-              (* Show budget information for this specific day *)
-              let open Unix in
-              let date_parts = String.split_on_char '-' daily.Spendo_lib.Types.date in
-              (match date_parts with
-               | [year_str; month_str; day_str] ->
-                   (try
-                     let year = int_of_string year_str in
-                     let month = int_of_string month_str - 1 in
-                     let day = int_of_string day_str in
-                     let tm = { 
-                       tm_sec = 0; tm_min = 0; tm_hour = 0; tm_mday = day; 
-                       tm_mon = month; tm_year = year - 1900; tm_wday = 0; 
-                       tm_yday = 0; tm_isdst = false 
-                     } in
-                     let date_time = fst (mktime tm) in
-                     let (remaining_budget, remaining_days) = Spendo_lib.Storage.get_remaining_budget_per_day_for_date date_time in
-                     if remaining_days > 0 then
-                       let budget_per_day = float_of_int remaining_budget /. float_of_int remaining_days /. 100.0 in
-                       Printf.printf "Day's budget: %.2f (%d days left)\n" budget_per_day remaining_days
-                     else if remaining_budget <> 0 then
-                       let budget_float = float_of_int remaining_budget /. 100.0 in
-                       Printf.printf "Budget period ended. Remaining: %.2f\n" budget_float
-                   with _ -> ())
-               | _ -> ());
-              print_endline ""
-            ) daily_list;
-    with
-    | e ->
-        Printf.printf "DEBUG: Exception caught: %s\n" (Printexc.to_string e);
-        print_endline "Error occurred while getting expenses"
 
 let set_monthly_budget budget =
   try
