@@ -4,6 +4,7 @@ type expense = {
   amount: int; (* Amount in cents *)
   message: string option;
   timestamp: string;
+  savings: bool; (* Whether this expense is paid by savings *)
 }
 
 type daily_expenses = {

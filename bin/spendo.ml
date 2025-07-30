@@ -1,11 +1,11 @@
 open Cmdliner
 
 (* CLI functions *)
-let add_expense amount message date_offset =
+let add_expense amount message date_offset savings =
   try
     let amount_float = float_of_string amount in
     let amount_cents = int_of_float (amount_float *. 100.0) in
-    Spendo_lib.Storage.add_expense amount_cents message date_offset;
+    Spendo_lib.Storage.add_expense amount_cents message (-1*date_offset) savings;
     let target_date = Spendo_lib.Storage.get_date_offset date_offset in
     Printf.printf "Today's date: %s\nAdded expense: %.2f" target_date amount_float;
     (match message with
@@ -15,6 +15,8 @@ let add_expense amount message date_offset =
      | 0 -> ()
      | n when n < 0 -> Printf.printf " (%d days ago)" (-n)
      | n -> Printf.printf " (%d days from now)" n);
+    if savings then
+      Printf.printf " [SAVINGS]";
     print_endline ""
   with
   | Failure _ -> 
@@ -140,6 +142,10 @@ let date_offset_arg =
   let doc = "Date offset in days (0=today, 1=yesterday, etc.)" in
   Arg.(value & opt int 0 & info ["d"; "date"] ~docv:"DAYS" ~doc)
 
+let savings_flag =
+  let doc = "Mark the expense as a savings" in
+  Arg.(value & flag & info ["a"; "savings"] ~doc)
+
 let list_flag =
   let doc = "List today's expenses" in
   Arg.(value & flag & info ["l"; "list"] ~doc)
@@ -174,7 +180,7 @@ let cmd =
     `P "spendo -s 25";
     `P "spendo -c";
   ] in
-  let term = Term.(const (fun amount message date_offset list days budget budget_start_day settings ->
+  let term = Term.(const (fun amount message date_offset savings list days budget budget_start_day settings ->
     if budget <> None then
       set_monthly_budget (Option.get budget)
     else if budget_start_day <> None then
@@ -184,11 +190,11 @@ let cmd =
     else if list || (amount = None && days > 1) then
       list_expenses days
     else if amount <> None then
-      add_expense (Option.get amount) message (-1*date_offset)
+      add_expense (Option.get amount) message (-1*date_offset) savings
     else
       list_expenses days
     ) 
-    $ amount_arg $ message_arg $ date_offset_arg $ list_flag $ days_arg $ budget_arg $ budget_start_day_arg $ settings_flag) in
+    $ amount_arg $ message_arg $ date_offset_arg $ savings_flag $ list_flag $ days_arg $ budget_arg $ budget_start_day_arg $ settings_flag) in
   Cmd.v (Cmd.info "spendo" ~version:"1.0.0" ~doc ~man) term
 
 (* Main function *)

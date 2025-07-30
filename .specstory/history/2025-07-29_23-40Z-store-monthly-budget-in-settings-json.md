@@ -6970,6 +6970,1052 @@ Let me rewrite the function to use the same logic as the working function, but a
 
 ---
 
+<details><summary>Edit file: lib/storage.ml</summary>
+
+I will rewrite the get_remaining_budget_per_day_for_date function to use the same correct logic as the working get_remaining_budget_per_day function, but adapted for a specific target date.
+
+**Chunk 1**
+Lines added: 2, lines removed: 3
+
+```diff
+@@ -313,10 +313,9 @@
+        let budget_start_time = fst (mktime budget_start_tm) in
+        
+-       (* Calculate budget period end *)
++       (* Calculate budget period end using the same logic as get_budget_period_end_date *)
+        let end_month = if budget_start_month = 11 then 0 else budget_start_month + 1 in
+        let end_year = if budget_start_month = 11 then budget_start_year + 1 else budget_start_year in
+        let end_tm = {
+-         target_tm with
+-         tm_mday = start_day;
++         budget_start_tm with
+          tm_mon = end_month;
+          tm_year = end_year;
+```
+
+</details>
+
+---
+
+Now let me build and test:
+
+
+---
+
+```bash
+dune build
+```
+
+```
+➜  spendo git:(main) ✗ dune build
+```
+
+---
+
+```bash
+./_build/default/bin/spendo.exe -n 2
+```
+
+```
+?➜  spendo git:(main) ?✗ ./_build/default/bin/spendo.exe -n 2
+Date: 2025-07-29
+Expenses:
+5.00 - guinguette cash
+9.94 - monop CCF
+Total: 14.94
+Budget per day: 0.00 (693987 days left)
+
+Date: 2025-07-30
+No expenses recorded for this day
+Budget per day: 0.00 (693986 days left)
+
+➜  spendo git:(main) ✗
+```
+
+---
+
+The issue is still there. Let me debug this by adding some debug output to see what values are being calculated:
+
+
+---
+
+<details><summary>Edit file: lib/storage.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 2, lines removed: undefined
+
+```diff
+@@ -350,4 +350,6 @@
+        let remaining_seconds = end_time -. target_date in
+        let remaining_days = int_of_float (remaining_seconds /. (24.0 *. 60.0 *. 60.0)) in
++       Printf.printf "DEBUG: target_date=%.0f, end_time=%.0f, remaining_seconds=%.0f, remaining_days=%d\n" 
++         target_date end_time remaining_seconds remaining_days;
+        
+        if remaining_days <= 0 then
+```
+
+</details>
+
+---
+
+```bash
+dune build
+```
+
+```
+➜  spendo git:(main) ✗ dune build
+```
+
+---
+
+```bash
+./_build/default/bin/spendo.exe -n 2
+```
+
+```
+?➜  spendo git:(main) ?✗ ./_build/default/bin/spendo.exe -n 2
+Date: 2025-07-29
+Expenses:
+5.00 - guinguette cash
+9.94 - monop CCF
+Total: 14.94
+DEBUG: target_date=1753740000, end_time=61714216800, remaining_seconds=59960476800, remaining_days=693987
+Budget per day: 0.00 (693987 days left)
+
+Date: 2025-07-30
+No expenses recorded for this day
+DEBUG: target_date=1753826400, end_time=61714216800, remaining_seconds=59960390400, remaining_days=693986
+Budget per day: 0.00 (693986 days left)
+
+➜  spendo git:(main) ✗
+```
+
+---
+
+Now I can see the issue! The `end_time` is calculated as `61714216800` which is a very large number (around year 3900), while the `target_date` is around `1753740000` (year 2025). This means the end date calculation is completely wrong.
+
+The issue is that I'm using `budget_start_tm` to calculate the end date, but `budget_start_tm` has the wrong year. Let me fix this by calculating the end date correctly:
+
+
+---
+
+<details><summary>Edit file: lib/storage.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 3, lines removed: 2
+
+```diff
+@@ -317,7 +317,8 @@
+        let end_year = if budget_start_month = 11 then budget_start_year + 1 else budget_start_year in
+        let end_tm = {
+-         budget_start_tm with
++         target_tm with
++         tm_mday = start_day;
+          tm_mon = end_month;
+-         tm_year = end_year;
++         tm_year = end_year - 1900;
+        } in
+        let end_time = fst (mktime end_tm) in
+```
+
+</details>
+
+---
+
+```bash
+dune build
+```
+
+```
+➜  spendo git:(main) ✗ dune build
+```
+
+---
+
+```bash
+./_build/default/bin/spendo.exe -n 2
+```
+
+```
+?➜  spendo git:(main) ?✗ ./_build/default/bin/spendo.exe -n 2
+Date: 2025-07-29
+Expenses:
+5.00 - guinguette cash
+9.94 - monop CCF
+Total: 14.94
+DEBUG: target_date=1753740000, end_time=1756072800, remaining_seconds=2332800, remaining_days=27
+Budget per day: 28.13 (27 days left)
+
+Date: 2025-07-30
+No expenses recorded for this day
+DEBUG: target_date=1753826400, end_time=1756072800, remaining_seconds=2246400, remaining_days=26
+Budget per day: 29.21 (26 days left)
+
+➜  spendo git:(main) ✗
+```
+
+---
+
+Excellent! Now the budget calculation is working correctly! I can see that:
+
+1. The `end_time` is now calculated correctly (around `1756072800` which is a reasonable date)
+2. The `remaining_days` is now reasonable (27 and 26 days)
+3. The `budget_per_day` is now showing realistic values ($28.13 and $29.21)
+
+The budget evolution is now working correctly! Let me remove the debug output and test the final version:
+
+
+---
+
+<details><summary>Edit file: lib/storage.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: undefined, lines removed: 2
+
+```diff
+@@ -351,6 +351,4 @@
+        let remaining_seconds = end_time -. target_date in
+        let remaining_days = int_of_float (remaining_seconds /. (24.0 *. 60.0 *. 60.0)) in
+-       Printf.printf "DEBUG: target_date=%.0f, end_time=%.0f, remaining_seconds=%.0f, remaining_days=%d\n" 
+-         target_date end_time remaining_seconds remaining_days;
+        
+        if remaining_days <= 0 then
+```
+
+</details>
+
+---
+
+```bash
+dune build
+```
+
+```
+➜  spendo git:(main) ✗ dune build
+```
+
+---
+
+```bash
+./_build/default/bin/spendo.exe -n 2
+```
+
+---
+
+_**User**_
+
+We're gonna add a tag to expenses to know if they are paid by savings or not (-s flag meaning paid by savings), in which case we ignore these expenses in budget calculations but we list them anyway (with a mrker showing they are to be paid by savings)
+
+---
+
+_**Assistant**_
+
+Great idea! I'll add a savings flag to expenses so you can mark expenses that are paid by savings and exclude them from budget calculations. Let me implement this step by step.
+
+First, let me update the data structures to include the savings flag:
+
+
+---
+
+Read file: lib/types.ml
+
+---
+
+Now I'll add the savings flag to the expense type:
+
+
+---
+
+<details><summary>Edit file: lib/types.ml</summary>
+
+I will add a savings flag to the expense type to track whether an expense is paid by savings.
+
+**Chunk 1**
+Lines added: 1, lines removed: undefined
+
+```diff
+@@ -5,4 +5,5 @@
+    message: string option;
+    timestamp: string;
++   savings: bool; (* Whether this expense is paid by savings *)
+  }
+  
+```
+
+</details>
+
+---
+
+Now I need to update the expense creation function in the Expense module:
+
+
+---
+
+Read file: lib/expense.ml
+
+---
+
+I need to update the `create_expense` function to include the savings flag:
+
+
+---
+
+<details><summary>Edit file: lib/expense.ml</summary>
+
+I will update the create_expense function to include a savings parameter and update the format_expense function to show a marker for savings expenses.
+
+**Chunk 1**
+Lines added: 2, lines removed: 2
+
+```diff
+@@ -34,7 +34,7 @@
+      minutes
+  
+- let create_expense amount message =
++ let create_expense amount message savings =
+    let timestamp = iso8601_of_timestamp_local (Unix.gettimeofday ()) in
+-   { Types.amount; message; timestamp }
++   { Types.amount; message; timestamp; savings }
+  
+  let total_expenses expenses =
+```
+
+**Chunk 2**
+Lines added: 2, lines removed: 1
+
+```diff
+@@ -47,5 +47,6 @@
+      | None -> ""
+    in
+-   Printf.sprintf "%s%s" amount_str message_str
++   let savings_str = if expense.Types.savings then " [SAVINGS]" else "" in
++   Printf.sprintf "%s%s%s" amount_str message_str savings_str
+  
+  let format_daily_expenses daily =
+```
+
+</details>
+
+---
+
+The linter errors are because the Types module hasn't been rebuilt yet. Let me build first to see if the errors resolve:
+
+
+---
+
+```bash
+dune build
+```
+
+```
+?➜  spendo git:(main) ?✗ dune build
+File "lib/storage.ml", line 43, characters 2-38:
+43 |   { Types.amount; message; timestamp }
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: Some record fields are undefined: savings
+➜  spendo git:(main) ✗
+```
+
+---
+
+I need to update the storage module to include the savings field in the JSON serialization and deserialization. Let me fix this:
+
+
+---
+
+Read file: lib/storage.ml
+
+---
+
+I need to update the JSON serialization functions to include the savings field:
+
+
+---
+
+<details><summary>Edit file: lib/storage.ml</summary>
+
+I will update the expense_to_json and json_to_expense functions to include the savings field.
+
+**Chunk 1**
+Lines added: 2, lines removed: 1
+
+```diff
+@@ -24,5 +24,6 @@
+      ("amount", `Int expense.Types.amount);
+      ("message", message_json);
+-     ("timestamp", `String expense.Types.timestamp)
++     ("timestamp", `String expense.Types.timestamp);
++     ("savings", `Bool expense.Types.savings)
+    ]
+  
+```
+
+**Chunk 2**
+Lines added: 5, lines removed: 1
+
+```diff
+@@ -41,5 +42,9 @@
+    in
+    let timestamp = Util.to_string (Util.member "timestamp" json) in
+-   { Types.amount; message; timestamp }
++   let savings = match Util.member "savings" json with
++     | `Bool s -> s
++     | _ -> false (* Default to false for backward compatibility *)
++   in
++   { Types.amount; message; timestamp; savings }
+  
+  let json_to_daily_expenses json =
+```
+
+</details>
+
+---
+
+I need to update the `add_expense` function call to include the savings parameter. Let me find and fix that:
+
+
+---
+
+<details><summary>Edit file: lib/storage.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 2, lines removed: 2
+
+```diff
+@@ -84,8 +84,8 @@
+  let get_today_date () = get_date_offset 0
+  
+- let add_expense amount message date_offset =
++ let add_expense amount message date_offset savings =
+    let target_date = get_date_offset date_offset in
+    let data = load () in
+-   let expense = Expense.create_expense amount message in
++   let expense = Expense.create_expense amount message savings in
+    
+    let updated_data = 
+```
+
+</details>
+
+---
+
+Now I need to update the budget calculation functions to exclude savings expenses. Let me find the functions that calculate expenses for budget periods:
+
+
+---
+
+Read file: lib/storage.ml
+
+---
+
+I need to update the expense calculation to exclude savings expenses. Let me update both budget calculation functions:
+
+
+---
+
+<details><summary>Edit file: lib/storage.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 4, lines removed: 1
+
+```diff
+@@ -264,5 +264,8 @@
+              let date_time = fst (mktime tm) in
+              if date_time >= start_date && date_time < end_date then
+-               List.iter (fun expense -> total := !total + expense.Types.amount) daily.Types.expenses
++               List.iter (fun expense -> 
++                 if not expense.Types.savings then
++                   total := !total + expense.Types.amount
++               ) daily.Types.expenses
+            with _ -> ())
+        | _ -> ()
+```
+
+</details>
+
+---
+
+Now I need to update the historical budget calculation function as well:
+
+
+---
+
+Read file: lib/storage.ml
+
+---
+
+I need to update the historical budget calculation function to also exclude savings expenses:
+
+
+---
+
+<details><summary>Edit file: lib/storage.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 4, lines removed: 1
+
+```diff
+@@ -351,5 +351,8 @@
+                let date_time = fst (mktime tm) in
+                if date_time >= budget_start_time && date_time <= target_date then
+-                 List.iter (fun expense -> total := !total + expense.Types.amount) daily.Types.expenses
++                 List.iter (fun expense -> 
++                   if not expense.Types.savings then
++                     total := !total + expense.Types.amount
++                 ) daily.Types.expenses
+              with _ -> ())
+          | _ -> ()
+```
+
+</details>
+
+---
+
+Now I need to update the CLI to add the savings flag. Let me update the main executable:
+
+
+---
+
+<details><summary>Edit file: bin/spendo.ml</summary>
+
+I will add a savings flag argument and update the add_expense function call to include the savings parameter.
+
+**Chunk 1**
+Lines added: 2, lines removed: 2
+
+```diff
+@@ -2,9 +2,9 @@
+  
+  (* CLI functions *)
+- let add_expense amount message date_offset =
++ let add_expense amount message date_offset savings =
+    try
+      let amount_float = float_of_string amount in
+      let amount_cents = int_of_float (amount_float *. 100.0) in
+-     Spendo_lib.Storage.add_expense amount_cents message date_offset;
++     Spendo_lib.Storage.add_expense amount_cents message (-1*date_offset) savings;
+      let target_date = Spendo_lib.Storage.get_date_offset date_offset in
+      Printf.printf "Today's date: %s\nAdded expense: %.2f" target_date amount_float;
+```
+
+**Chunk 2**
+Lines added: 2, lines removed: undefined
+
+```diff
+@@ -16,4 +16,6 @@
+       | n when n < 0 -> Printf.printf " (%d days ago)" (-n)
+       | n -> Printf.printf " (%d days from now)" n);
++     if savings then
++       Printf.printf " [SAVINGS]";
+      print_endline ""
+    with
+```
+
+**Chunk 3**
+Lines added: 4, lines removed: undefined
+
+```diff
+@@ -141,4 +143,8 @@
+    Arg.(value & opt int 0 & info ["d"; "date"] ~docv:"DAYS" ~doc)
+  
++ let savings_flag =
++   let doc = "Mark the expense as a savings" in
++   Arg.(value & flag & info ["s"; "savings"] ~doc)
++ 
+  let list_flag =
+    let doc = "List today's expenses" in
+```
+
+**Chunk 4**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -175,5 +181,5 @@
+      `P "spendo -c";
+    ] in
+-   let term = Term.(const (fun amount message date_offset list days budget budget_start_day settings ->
++   let term = Term.(const (fun amount message date_offset savings list days budget budget_start_day settings ->
+      if budget <> None then
+        set_monthly_budget (Option.get budget)
+```
+
+**Chunk 5**
+Lines added: 2, lines removed: 2
+
+```diff
+@@ -185,9 +191,9 @@
+        list_expenses days
+      else if amount <> None then
+-       add_expense (Option.get amount) message (-1*date_offset)
++       add_expense (Option.get amount) message (-1*date_offset) savings
+      else
+        list_expenses days
+      ) 
+-     $ amount_arg $ message_arg $ date_offset_arg $ list_flag $ days_arg $ budget_arg $ budget_start_day_arg $ settings_flag) in
++     $ amount_arg $ message_arg $ date_offset_arg $ savings_flag $ list_flag $ days_arg $ budget_arg $ budget_start_day_arg $ settings_flag) in
+    Cmd.v (Cmd.info "spendo" ~version:"1.0.0" ~doc ~man) term
+  
+```
+
+</details>
+
+---
+
+The linter errors are because the storage module hasn't been built yet. Let me build first to see if the errors resolve:
+
+
+---
+
+```bash
+dune build
+```
+
+```
+➜  spendo git:(main) ✗ dune build
+File "test/test_spendo.ml", line 16, characters 62-69:
+16 |         | [] -> [{ Spendo_lib.Types.date = today; expenses = [expense] }]
+                                                                   ^^^^^^^
+Error: This expression has type bool -> Spendo_lib.Types.expense
+       but an expression was expected of type Spendo_lib.Types.expense
+➜  spendo git:(main) ✗
+```
+
+---
+
+I need to fix the test file to include the savings parameter. Let me update it:
+
+
+---
+
+Read file: test/test_spendo.ml
+
+---
+
+I need to update the test file to include the savings parameter in all the `create_expense` calls:
+
+
+---
+
+<details><summary>Edit file: test/test_spendo.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -10,5 +10,5 @@
+    
+    let add_expense amount message =
+-     let expense = Spendo_lib.Expense.create_expense amount message in
++     let expense = Spendo_lib.Expense.create_expense amount message false in
+      let today = "2025-01-15" in
+      let updated_data = 
+```
+
+</details>
+
+---
+
+I need to update all the `create_expense` calls in the test file to include the savings parameter. Let me fix them all:
+
+
+---
+
+<details><summary>Edit file: test/test_spendo.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -32,5 +32,5 @@
+  (* Test cases *)
+  let test_expense_creation () =
+-   let expense = Spendo_lib.Expense.create_expense 1000 (Some "test") in
++   let expense = Spendo_lib.Expense.create_expense 1000 (Some "test") false in
+    check int "amount in cents" 1000 expense.Spendo_lib.Types.amount;
+    check (option string) "message" (Some "test") expense.Spendo_lib.Types.message;
+```
+
+</details>
+
+---
+
+I need to fix all the remaining `create_expense` calls. Let me do them all at once:
+
+
+---
+
+<details><summary>Edit file: test/test_spendo.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 5, lines removed: 5
+
+```diff
+@@ -39,18 +39,18 @@
+  
+  let test_expense_formatting () =
+-   let expense = Spendo_lib.Expense.create_expense 1250 (Some "lunch") in
++   let expense = Spendo_lib.Expense.create_expense 1250 (Some "lunch") false in
+    let formatted = Spendo_lib.Expense.format_expense expense in
+    check string "formatted expense" "12.50 - lunch" formatted
+  
+  let test_expense_formatting_no_message () =
+-   let expense = Spendo_lib.Expense.create_expense 1000 None in
++   let expense = Spendo_lib.Expense.create_expense 1000 None false in
+    let formatted = Spendo_lib.Expense.format_expense expense in
+    check string "formatted expense no message" "10.00" formatted
+  
+  let test_total_expenses () =
+    let expenses = [
+-     Spendo_lib.Expense.create_expense 1000 (Some "first");
+-     Spendo_lib.Expense.create_expense 2500 (Some "second");
+-     Spendo_lib.Expense.create_expense 500 None;
++     Spendo_lib.Expense.create_expense 1000 (Some "first") false;
++     Spendo_lib.Expense.create_expense 2500 (Some "second") false;
++     Spendo_lib.Expense.create_expense 500 None false;
+    ] in
+    let total = Spendo_lib.Expense.total_expenses expenses in
+```
+
+</details>
+
+---
+
+Let me fix the remaining ones:
+
+
+---
+
+<details><summary>Edit file: test/test_spendo.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 2, lines removed: 2
+
+```diff
+@@ -61,6 +61,6 @@
+      Spendo_lib.Types.date = "2025-01-15";
+      expenses = [
+-       Spendo_lib.Expense.create_expense 1000 (Some "breakfast");
+-       Spendo_lib.Expense.create_expense 2500 (Some "lunch");
++       Spendo_lib.Expense.create_expense 1000 (Some "breakfast") false;
++       Spendo_lib.Expense.create_expense 2500 (Some "lunch") false;
+      ]
+    } in
+```
+
+</details>
+
+---
+
+Let me fix the last one:
+
+
+---
+
+<details><summary>Edit file: test/test_spendo.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -93,5 +93,5 @@
+  
+  let test_json_serialization () =
+-   let expense = Spendo_lib.Expense.create_expense 1250 (Some "test") in
++   let expense = Spendo_lib.Expense.create_expense 1250 (Some "test") false in
+    let json = Spendo_lib.Storage.expense_to_json expense in
+    let json_str = Yojson.Safe.to_string json in
+```
+
+</details>
+
+---
+
+Now let me build to see if all the errors are fixed:
+
+
+---
+
+```bash
+dune build
+```
+
+```
+➜  spendo git:(main) ✗ dune build
+```
+
+---
+
+Great! Now let me test the savings feature:
+
+
+---
+
+```bash
+./_build/default/bin/spendo.exe 10.00 -m "test expense"
+```
+
+```
+?➜  spendo git:(main) ?✗ ./_build/default/bin/spendo.exe 10.00 -m "test expense"
+Fatal error: exception Invalid_argument("option name -s defined twice (doc strings are 'Set the day of the mo
+nth to start the budget (1-31)' and 'Mark the expense as a savings')")
+➜  spendo git:(main) ✗
+```
+
+---
+
+I have a conflict with the `-s` flag! The `-s` flag is already used for setting the budget start day. I need to use a different flag for savings. Let me fix this:
+
+
+---
+
+<details><summary>Edit file: bin/spendo.ml</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -145,5 +145,5 @@
+  let savings_flag =
+    let doc = "Mark the expense as a savings" in
+-   Arg.(value & flag & info ["s"; "savings"] ~doc)
++   Arg.(value & flag & info ["a"; "savings"] ~doc)
+  
+  let list_flag =
+```
+
+</details>
+
+---
+
+The linter errors are just about the module not being built yet. Let me build and test:
+
+
+---
+
+```bash
+dune build
+```
+
+```
+➜  spendo git:(main) ✗ dune build
+```
+
+---
+
+```bash
+./_build/default/bin/spendo.exe 10.00 -m "test expense"
+```
+
+```
+?➜  spendo git:(main) ?✗ ./_build/default/bin/spendo.exe 10.00 -m "test expense"
+Today's date: 2025-07-30
+Added expense: 10.00 (test expense)
+➜  spendo git:(main) ✗
+```
+
+---
+
+Great! Now let me test with the savings flag:
+
+
+---
+
+```bash
+./_build/default/bin/spendo.exe 15.00 -m "savings expense" -a
+```
+
+```
+➜  spendo git:(main) ✗ ./_build/default/bin/spendo.exe 15.00 -m "savings expense" -a
+Today's date: 2025-07-30
+Added expense: 15.00 (savings expense) [SAVINGS]
+➜  spendo git:(main) ✗
+```
+
+---
+
+Perfect! Now let me test listing expenses to see if the savings expenses are marked correctly:
+
+
+---
+
+```bash
+./_build/default/bin/spendo.exe -l
+```
+
+```
+➜  spendo git:(main) ✗ ./_build/default/bin/spendo.exe -l
+Date: 2025-07-30
+Expenses:
+15.00 - savings expense [SAVINGS]
+10.00 - test expense
+Total: 25.00
+Remaining day's budget: 28.83 (26 days left)
+➜  spendo git:(main) ✗
+```
+
+---
+
+Excellent! The savings feature is working correctly:
+
+1. ✅ The savings expense is marked with `[SAVINGS]` in the listing
+2. ✅ The total shows all expenses (25.00) including savings
+3. ✅ The budget calculation excludes savings expenses (remaining budget is higher than if savings were included)
+
+Let me test with multiple days to see the budget evolution:
+
+
+---
+
+```bash
+./_build/default/bin/spendo.exe -n 2
+```
+
+```
+➜  spendo git:(main) ✗ ./_build/default/bin/spendo.exe -n 2
+Date: 2025-07-29
+Expenses:
+5.00 - guinguette cash
+9.94 - monop CCF
+Total: 14.94
+Day's budget: 28.13 (27 days left)
+
+Date: 2025-07-30
+Expenses:
+15.00 - savings expense [SAVINGS]
+10.00 - test expense
+Total: 25.00
+Day's budget: 28.83 (26 days left)
+
+➜  spendo git:(main) ✗
+```
+
+---
+
+Perfect! The savings feature is working exactly as requested:
+
+## Summary
+
+I've successfully implemented the savings feature with the following functionality:
+
+### ✅ **Core Features:**
+1. **Savings Flag**: Added `-a` flag to mark expenses as paid by savings
+2. **Visual Marker**: Savings expenses are marked with `[SAVINGS]` in listings
+3. **Budget Exclusion**: Savings expenses are excluded from budget calculations
+4. **Complete Listing**: All expenses (including savings) are still listed
+
+### ✅ **How it works:**
+- `spendo 10.00 -m "regular expense"` - Normal expense (counted in budget)
+- `spendo 15.00 -m "savings expense" -a` - Savings expense (excluded from budget)
+- `spendo -l` - Lists all expenses with `[SAVINGS]` marker for savings
+- `spendo -n 2` - Shows budget evolution, excluding savings from calculations
+
+### ✅ **Budget Calculation:**
+- Regular expenses: Counted against monthly budget
+- Savings expenses: Excluded from budget calculations
+- Budget per day shows realistic values based only on regular expenses
+- Total expenses still show all expenses for complete tracking
+
+### ✅ **Example Output:**
+```
+Date: 2025-07-30
+Expenses:
+15.00 - savings expense [SAVINGS]
+10.00 - test expense
+Total: 25.00
+Remaining day's budget: 28.83 (26 days left)
+```
+
+The budget calculation correctly excludes the $15.00 savings expense, so the remaining budget is higher than it would be if savings were included.
+
+---
+
+_**User**_
+
+Let's add a Total (excl. savings) line when they are savings in the list of expenses
+
+---
+
+_**Assistant**_
+
+Great idea! I'll add a "Total (excl. savings)" line when there are savings expenses in the listing. This will make it clear what the total is excluding savings expenses.
+
+Let me update the `format_daily_expenses` function in the Expense module:
+
+
+---
+
+<details><summary>Edit file: lib/expense.ml</summary>
+
+I will update the format_daily_expenses function to show a "Total (excl. savings)" line when there are savings expenses in the listing.
+
+**Chunk 1**
+Lines added: 14, lines removed: 2
+
+```diff
+@@ -54,4 +54,16 @@
+    let expenses_str = List.map format_expense daily.Types.expenses in
+    let expenses_list = String.concat "\n" expenses_str in
+-   Printf.sprintf "Date: %s\nExpenses:\n%s\nTotal: %.2f" 
+-     daily.Types.date expenses_list (float_of_int total /. 100.0) 
++   
++   (* Calculate total excluding savings *)
++   let non_savings_expenses = List.filter (fun exp -> not exp.Types.savings) daily.Types.expenses in
++   let total_excl_savings = total_expenses non_savings_expenses in
++   
++   let base_output = Printf.sprintf "Date: %s\nExpenses:\n%s\nTotal: %.2f" 
++     daily.Types.date expenses_list (float_of_int total /. 100.0) in
++   
++   (* Add savings-excluded total if there are savings expenses *)
++   let has_savings = List.exists (fun exp -> exp.Types.savings) daily.Types.expenses in
++   if has_savings then
++     base_output ^ Printf.sprintf "\nTotal (excl. savings): %.2f" (float_of_int total_excl_savings /. 100.0)
++   else
++     base_output 
+```
+
+</details>
+
+---
+
+Now let me build and test this feature:
+
+
+---
+
+```bash
+dune build
+```
+
+```
+➜  spendo git:(main) ✗ dune build
+```
+
+---
+
 
 
 ---

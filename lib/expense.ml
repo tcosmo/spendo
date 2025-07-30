@@ -33,9 +33,9 @@ let iso8601_of_timestamp_local (timestamp : float) : string =
     hours
     minutes
 
-let create_expense amount message =
+let create_expense amount message savings =
   let timestamp = iso8601_of_timestamp_local (Unix.gettimeofday ()) in
-  { Types.amount; message; timestamp }
+  { Types.amount; message; timestamp; savings }
 
 let total_expenses expenses =
   List.fold_left (fun acc exp -> acc + exp.Types.amount) 0 expenses
@@ -46,11 +46,24 @@ let format_expense expense =
     | Some msg -> " - " ^ msg
     | None -> ""
   in
-  Printf.sprintf "%s%s" amount_str message_str
+  let savings_str = if expense.Types.savings then " [SAVINGS]" else "" in
+  Printf.sprintf "%s%s%s" amount_str message_str savings_str
 
 let format_daily_expenses daily =
   let total = total_expenses daily.Types.expenses in
   let expenses_str = List.map format_expense daily.Types.expenses in
   let expenses_list = String.concat "\n" expenses_str in
-  Printf.sprintf "Date: %s\nExpenses:\n%s\nTotal: %.2f" 
-    daily.Types.date expenses_list (float_of_int total /. 100.0) 
+  
+  (* Calculate total excluding savings *)
+  let non_savings_expenses = List.filter (fun exp -> not exp.Types.savings) daily.Types.expenses in
+  let total_excl_savings = total_expenses non_savings_expenses in
+  
+  let base_output = Printf.sprintf "Date: %s\nExpenses:\n%s\nTotal: %.2f" 
+    daily.Types.date expenses_list (float_of_int total /. 100.0) in
+  
+  (* Add savings-excluded total if there are savings expenses *)
+  let has_savings = List.exists (fun exp -> exp.Types.savings) daily.Types.expenses in
+  if has_savings then
+    base_output ^ Printf.sprintf "\nTotal (excl. savings): %.2f" (float_of_int total_excl_savings /. 100.0)
+  else
+    base_output 

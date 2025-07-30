@@ -23,7 +23,8 @@ let expense_to_json expense =
   `Assoc [
     ("amount", `Int expense.Types.amount);
     ("message", message_json);
-    ("timestamp", `String expense.Types.timestamp)
+    ("timestamp", `String expense.Types.timestamp);
+    ("savings", `Bool expense.Types.savings)
   ]
 
 let daily_expenses_to_json daily =
@@ -40,7 +41,11 @@ let json_to_expense json =
     | _ -> None
   in
   let timestamp = Util.to_string (Util.member "timestamp" json) in
-  { Types.amount; message; timestamp }
+  let savings = match Util.member "savings" json with
+    | `Bool s -> s
+    | _ -> false (* Default to false for backward compatibility *)
+  in
+  { Types.amount; message; timestamp; savings }
 
 let json_to_daily_expenses json =
   let date = Util.to_string (Util.member "date" json) in
@@ -78,10 +83,10 @@ let get_date_offset days_offset =
 
 let get_today_date () = get_date_offset 0
 
-let add_expense amount message date_offset =
+let add_expense amount message date_offset savings =
   let target_date = get_date_offset date_offset in
   let data = load () in
-  let expense = Expense.create_expense amount message in
+  let expense = Expense.create_expense amount message savings in
   
   let updated_data = 
     let rec update_or_add = function
@@ -258,7 +263,10 @@ let get_expenses_in_budget_period () =
             } in
             let date_time = fst (mktime tm) in
             if date_time >= start_date && date_time < end_date then
-              List.iter (fun expense -> total := !total + expense.Types.amount) daily.Types.expenses
+              List.iter (fun expense -> 
+                if not expense.Types.savings then
+                  total := !total + expense.Types.amount
+              ) daily.Types.expenses
           with _ -> ())
       | _ -> ()
     ) data;
@@ -342,7 +350,10 @@ let get_remaining_budget_per_day_for_date target_date =
               } in
               let date_time = fst (mktime tm) in
               if date_time >= budget_start_time && date_time <= target_date then
-                List.iter (fun expense -> total := !total + expense.Types.amount) daily.Types.expenses
+                List.iter (fun expense -> 
+                  if not expense.Types.savings then
+                    total := !total + expense.Types.amount
+                ) daily.Types.expenses
             with _ -> ())
         | _ -> ()
       ) data;

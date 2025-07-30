@@ -9,7 +9,7 @@ module TestStorage = struct
   let reset () = test_data := []
   
   let add_expense amount message =
-    let expense = Spendo_lib.Expense.create_expense amount message in
+    let expense = Spendo_lib.Expense.create_expense amount message false in
     let today = "2025-01-15" in
     let updated_data = 
       let rec update_or_add = function
@@ -31,27 +31,27 @@ end
 
 (* Test cases *)
 let test_expense_creation () =
-  let expense = Spendo_lib.Expense.create_expense 1000 (Some "test") in
+  let expense = Spendo_lib.Expense.create_expense 1000 (Some "test") false in
   check int "amount in cents" 1000 expense.Spendo_lib.Types.amount;
   check (option string) "message" (Some "test") expense.Spendo_lib.Types.message;
   (* Don't check exact timestamp since it's dynamic *)
   check bool "timestamp exists" (String.length expense.Spendo_lib.Types.timestamp > 0) true
 
 let test_expense_formatting () =
-  let expense = Spendo_lib.Expense.create_expense 1250 (Some "lunch") in
+  let expense = Spendo_lib.Expense.create_expense 1250 (Some "lunch") false in
   let formatted = Spendo_lib.Expense.format_expense expense in
   check string "formatted expense" "12.50 - lunch" formatted
 
 let test_expense_formatting_no_message () =
-  let expense = Spendo_lib.Expense.create_expense 1000 None in
+  let expense = Spendo_lib.Expense.create_expense 1000 None false in
   let formatted = Spendo_lib.Expense.format_expense expense in
   check string "formatted expense no message" "10.00" formatted
 
 let test_total_expenses () =
   let expenses = [
-    Spendo_lib.Expense.create_expense 1000 (Some "first");
-    Spendo_lib.Expense.create_expense 2500 (Some "second");
-    Spendo_lib.Expense.create_expense 500 None;
+    Spendo_lib.Expense.create_expense 1000 (Some "first") false;
+    Spendo_lib.Expense.create_expense 2500 (Some "second") false;
+    Spendo_lib.Expense.create_expense 500 None false;
   ] in
   let total = Spendo_lib.Expense.total_expenses expenses in
   check int "total in cents" 4000 total
@@ -60,8 +60,8 @@ let test_daily_expenses_formatting () =
   let daily = {
     Spendo_lib.Types.date = "2025-01-15";
     expenses = [
-      Spendo_lib.Expense.create_expense 1000 (Some "breakfast");
-      Spendo_lib.Expense.create_expense 2500 (Some "lunch");
+      Spendo_lib.Expense.create_expense 1000 (Some "breakfast") false;
+      Spendo_lib.Expense.create_expense 2500 (Some "lunch") false;
     ]
   } in
   let formatted = Spendo_lib.Expense.format_daily_expenses daily in
@@ -92,7 +92,7 @@ let test_storage_multiple_expenses () =
   | None -> fail "Expected to find today's expenses"
 
 let test_json_serialization () =
-  let expense = Spendo_lib.Expense.create_expense 1250 (Some "test") in
+  let expense = Spendo_lib.Expense.create_expense 1250 (Some "test") false in
   let json = Spendo_lib.Storage.expense_to_json expense in
   let json_str = Yojson.Safe.to_string json in
   (* Check that the JSON has the expected structure by parsing it back *)
